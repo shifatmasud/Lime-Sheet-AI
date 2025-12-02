@@ -121,7 +121,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {messages.length === 0 && (
           <div style={{ ...S.flexCol, alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5, textAlign: 'center', padding: Tokens.Space[8] }}>
             <Sparkle size={48} color={Tokens.Color.Base.Content[3]} weight="thin" style={{ marginBottom: Tokens.Space[4] }} />
-            <p style={{ ...Tokens.Type.Readable.Body.L, color: Tokens.Color.Base.Content[2] }}>"Analyze the Q1 sales trend."</p>
             <p style={{ ...Tokens.Type.Readable.Body.M, color: Tokens.Color.Base.Content[3] }}>Ask questions about your data.</p>
           </div>
         )}

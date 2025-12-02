@@ -107,6 +107,10 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
   const isActiveColor = color && color !== 'transparent';
   // We use transparent background because the colgroup handles the color now
   const bgColor = 'transparent'; 
+  
+  // Use high contrast text if a column color is active, otherwise use default secondary content color
+  const textColor = isActiveColor ? Tokens.Color.Base.Content[1] : Tokens.Color.Base.Content[2];
+  const inputColor = isActiveColor ? Tokens.Color.Base.Content[1] : Tokens.Color.Accent.Content[2];
 
   return (
     <th 
@@ -164,7 +168,7 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
                   border: 'none',
                   outline: 'none',
                   backgroundColor: 'transparent',
-                  color: Tokens.Color.Accent.Content[2],
+                  color: inputColor,
                   ...Tokens.Type.Readable.Label.S,
               }}
             />
@@ -181,7 +185,7 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   cursor: isPressing ? 'grabbing' : 'pointer',
-                  color: Tokens.Color.Base.Content[2],
+                  color: textColor,
                   ...Tokens.Type.Readable.Label.S,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',

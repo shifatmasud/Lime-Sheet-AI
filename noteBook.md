@@ -9,3 +9,5 @@
 - [x] Ensure Gemini API Key is secure (Env var only).
 - [x] Create Import Map for dependencies.
 - [x] Expose 'Fit to Content' option in Column Menu.
+- [x] Fix Header Text Contrast on colored columns (Accessibility).
+- [x] Update Chat Interface title to "Ask your data".
