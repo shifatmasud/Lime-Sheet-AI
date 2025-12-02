@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LimeSheet AI</title>
+    <script src="./importmap.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Inter:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --c-base-s-1: rgba(255, 255, 255, 0.9);
+        --c-base-s-2: #f9fafb;
+        --c-base-s-3: rgba(243, 244, 246, 0.8);
+        --c-base-c-1: #111827;
+        --c-base-c-2: #6b7280;
+        --c-base-c-3: #9ca3af;
+        --c-base-b-1: rgba(0, 0, 0, 0.06);
+        --c-base-b-2: rgba(0, 0, 0, 0.12);
+        --c-accent-s-1: #bef264;
+        --c-accent-s-2: rgba(236, 252, 203, 0.5);
+        --c-accent-s-3: #3f6212;
+        --c-accent-c-1: #1a2e05;
+        --c-accent-c-2: #3f6212;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--c-base-s-2);
+        color: var(--c-base-c-1);
+        overflow: hidden;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      input, button, textarea {
+        font-family: inherit;
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--c-base-b-2);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--c-base-c-3);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.25",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+    "three": "https://aistudiocdn.com/three@^0.181.2",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "papaparse": "https://aistudiocdn.com/papaparse@^5.5.3",
+    "gsap": "https://aistudiocdn.com/gsap@^3.13.0",
+    "phosphor-react": "https://aistudiocdn.com/phosphor-react@^1.4.1"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>

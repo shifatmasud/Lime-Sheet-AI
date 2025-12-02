@@ -1,0 +1,5 @@
+{
+  "name": "LimeSheet AI",
+  "description": "An ultra-minimalist, intelligent spreadsheet studio powered by Gemini. Features agentic data processing, CSV I/O, Google Sheet importing, and automated visualization in a soft, low-cognitive-load interface.",
+  "requestFramePermissions": []
+}

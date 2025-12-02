@@ -1,11 +1,27 @@
-<div align="center">
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+# LimeSheet AI
 
-  <h1>Built with AI Studio</h2>
+An ultra-minimalist, intelligent spreadsheet studio powered by Gemini.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Features
+- **Smart Analysis**: Ask questions about your data using natural language.
+- **Data Visualization**: Auto-generate charts from text queries.
+- **CSV I/O**: Import and Export standard CSV files.
+- **Google Sheets**: Import directly from public Google Sheet URLs.
+- **Premium UI**: Glassmorphic, motion-rich interface built with custom design tokens.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Architecture
+- **Framework**: React 18 (via ESM.sh)
+- **State Management**: React Hooks (Atomic, Durable)
+- **Styling**: JS Objects + Design Tokens (No Tailwind)
+- **Motion**: Framer Motion & GSAP
+- **3D**: Three.js (Reactive Background)
+- **AI**: @google/genai SDK
 
-</div>
+## Directory Structure
+- `components/Core`: Basic building blocks (Button, Input, Background).
+- `components/Package`: Complex features (Table, Chat, Chart).
+- `components/Section`: Layout regions (Header).
+- `components/Page`: Full page layouts (Home).
+- `services`: Logic for API and Data processing.
+- `utils`: Design system tokens and helpers.
