@@ -1,17 +1,28 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Sparkle } from 'phosphor-react';
+import { Sparkle, X, MagicWand, Function as FunctionIcon, Plus } from 'phosphor-react';
 import { parseCSV, serializeCSV, fetchGoogleSheet } from '../../services/csvService';
 import { geminiService } from '../../services/geminiService';
 import { Table } from '../Package/Table';
 import { Header } from '../Section/Header';
 import { ChatInterface } from '../Package/ChatInterface';
 import { Button } from '../Core/Button';
+import { Input } from '../Core/Input';
 import { Background } from '../Core/Background';
 import { AppState, Message, MessageType, ChartConfig, ColumnMeta, DashboardItem } from '../../types';
 import { DEFAULT_DATA, DEFAULT_HEADERS } from '../../constants';
-import { Tokens, injectTheme, useIsMobile } from '../../utils/styles';
+import { Tokens, injectTheme, useIsMobile, S } from '../../utils/styles';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const FORMULA_TEMPLATES = [
+  { label: 'Sum', value: '=SUM(A{{row}}, B{{row}})', desc: 'Add two cells', icon: <Plus size={14} /> },
+  { label: 'Range Sum', value: '=SUM(A{{row}}:C{{row}})', desc: 'Sum cols A to C', icon: <Plus size={14} /> },
+  { label: 'Average', value: '=AVERAGE(A{{row}}, B{{row}})', desc: 'Mean of cells', icon: <FunctionIcon size={14} /> },
+  { label: 'Multiply', value: '=A{{row}} * B{{row}}', desc: 'Product of cells', icon: <X size={14} /> },
+  { label: 'Condition', value: '=IF(A{{row}}>100, "High", "Low")', desc: 'Logic check', icon: <Sparkle size={14} /> },
+  { label: 'Combine', value: '=A{{row}} & " " & B{{row}}', desc: 'Join text', icon: <MagicWand size={14} /> },
+];
 
 export const Home: React.FC = () => {
   const [state, setState] = useState<AppState>({
@@ -28,7 +39,10 @@ export const Home: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const isMobile = useIsMobile();
-  const [initialInput, setInitialInput] = useState(''); // Used for smart formulas
+  
+  // Formula State
+  const [manualFormulaCol, setManualFormulaCol] = useState<number | null>(null);
+  const [formulaInput, setFormulaInput] = useState('');
 
   // Initialize theme
   useEffect(() => {
@@ -175,9 +189,6 @@ export const Home: React.FC = () => {
   // Smart Formula Handler
   const handleSmartFormula = useCallback((colIndex: number) => {
       const headerName = state.headers[colIndex];
-      const prompt = `Calculate the values for column '${headerName}' using a formula that...`;
-      
-      // Add a system message to guide the user
       const sysMsg: Message = {
           id: uuidv4(),
           type: MessageType.AI,
@@ -191,9 +202,46 @@ export const Home: React.FC = () => {
       }));
       
       setIsChatOpen(true);
-      // We could use a context provider or simpler state passing for the input value,
-      // but here we rely on the user seeing the prompt.
   }, [state.headers]);
+
+  // Manual Formula Handler
+  const handleManualFormula = useCallback((colIndex: number) => {
+      setManualFormulaCol(colIndex);
+      
+      // Attempt to auto-detect pattern from the first row of data
+      // Excel Logic: Header is Row 1, First Data Row is Row 2.
+      // So we look for the number '2' in the first data cell and assume it refers to the current row.
+      const firstRowVal = state.data[0]?.[colIndex]?.value;
+      if (firstRowVal && firstRowVal.startsWith('=')) {
+          // Replace '2' with '{{row}}' only if it seems to be part of a cell ref like A2, B2
+          // Regex looks for a non-digit followed by '2' followed by a non-digit or end of string
+          const detected = firstRowVal.replace(/(\D)2(\D|$)/g, '$1{{row}}$2');
+          setFormulaInput(detected);
+      } else {
+          setFormulaInput('=');
+      }
+  }, [state.data]);
+
+  const applyManualFormula = () => {
+      if (manualFormulaCol === null) return;
+      
+      setState(prev => {
+          const newData = prev.data.map((row, index) => {
+              // Replace {{row}} with the spreadsheet row index (header is 1, so first data row is 2)
+              const cellValue = formulaInput.replace(/{{row}}/g, (index + 2).toString());
+              
+              const newRow = [...row];
+              if (newRow[manualFormulaCol]) {
+                  newRow[manualFormulaCol] = { value: cellValue };
+              }
+              return newRow;
+          });
+          return { ...prev, data: newData };
+      });
+      
+      setManualFormulaCol(null);
+      setFormulaInput('');
+  };
 
   // Dashboard Handlers
   const handleAddDashboardItem = (item: DashboardItem) => {
@@ -317,6 +365,7 @@ export const Home: React.FC = () => {
                 onDeleteRow={handleDeleteRow}
                 onDeleteColumn={handleDeleteColumn}
                 onSmartFormula={handleSmartFormula}
+                onManualFormula={handleManualFormula}
             />
           </motion.div>
       </main>
@@ -360,7 +409,110 @@ export const Home: React.FC = () => {
         onAddDashboardItem={handleAddDashboardItem}
         onRemoveDashboardItem={handleRemoveDashboardItem}
         onUpdateDashboardItem={handleUpdateDashboardItem}
+        isDark={theme === 'dark'}
       />
+
+      {/* Manual Formula Modal */}
+      <AnimatePresence>
+        {manualFormulaCol !== null && (
+           <div style={{ ...S.absoluteFill, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+              <motion.div
+                 initial={{ opacity: 0, scale: 0.9 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 exit={{ opacity: 0, scale: 0.9 }}
+                 style={{
+                     width: isMobile ? '90%' : '500px',
+                     backgroundColor: Tokens.Color.Base.Surface[1],
+                     borderRadius: Tokens.Effect.Radius.L,
+                     boxShadow: Tokens.Effect.Shadow.Float,
+                     border: `1px solid ${Tokens.Color.Base.Border[1]}`,
+                     display: 'flex',
+                     flexDirection: 'column',
+                     overflow: 'hidden'
+                 }}
+              >
+                  {/* Modal Header */}
+                  <div style={{ padding: Tokens.Space[5], borderBottom: `1px solid ${Tokens.Color.Base.Border[1]}`, ...S.flexBetween }}>
+                      <div>
+                          <h3 style={{ ...Tokens.Type.Readable.Label.L, color: Tokens.Color.Base.Content[1] }}>Apply Formula</h3>
+                          <p style={{ ...Tokens.Type.Readable.Body.S, color: Tokens.Color.Base.Content[3] }}>
+                              Apply logic to <span style={{ color: Tokens.Color.Accent.Content[2], fontWeight: 600 }}>{state.headers[manualFormulaCol]}</span>
+                          </p>
+                      </div>
+                      <button onClick={() => setManualFormulaCol(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: Tokens.Color.Base.Content[2], padding: Tokens.Space[2] }}>
+                         <X size={20} />
+                      </button>
+                  </div>
+                  
+                  {/* Modal Content */}
+                  <div style={{ padding: Tokens.Space[5], display: 'flex', flexDirection: 'column', gap: Tokens.Space[5] }}>
+                      {/* Templates Grid */}
+                      <div>
+                        <label style={{ ...Tokens.Type.Readable.Label.S, color: Tokens.Color.Base.Content[3], marginBottom: Tokens.Space[2], display: 'block' }}>Quick Templates</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: Tokens.Space[2] }}>
+                          {FORMULA_TEMPLATES.map((tmpl) => (
+                            <button
+                              key={tmpl.label}
+                              onClick={() => setFormulaInput(tmpl.value)}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                padding: Tokens.Space[3],
+                                backgroundColor: Tokens.Color.Base.Surface[2],
+                                border: `1px solid ${Tokens.Color.Base.Border[1]}`,
+                                borderRadius: Tokens.Effect.Radius.M,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                textAlign: 'left',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = Tokens.Color.Accent.Surface[3];
+                                e.currentTarget.style.backgroundColor = Tokens.Color.Accent.Surface[2];
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = Tokens.Color.Base.Border[1];
+                                e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2];
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: Tokens.Space[2], marginBottom: 4, color: Tokens.Color.Base.Content[1], fontWeight: 600, fontSize: '13px' }}>
+                                {tmpl.icon} {tmpl.label}
+                              </div>
+                              <span style={{ fontSize: '11px', color: Tokens.Color.Base.Content[3] }}>{tmpl.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Input 
+                         value={formulaInput}
+                         onChange={(e) => setFormulaInput(e.target.value)}
+                         placeholder="=A{{row}} + B{{row}}"
+                         label="Formula Pattern"
+                         autoFocus
+                         onKeyDown={(e) => e.key === 'Enter' && applyManualFormula()}
+                      />
+                      
+                      <div style={{ backgroundColor: Tokens.Color.Base.Surface[2], padding: Tokens.Space[3], borderRadius: Tokens.Effect.Radius.M, border: `1px solid ${Tokens.Color.Base.Border[1]}` }}>
+                          <p style={{ ...Tokens.Type.Readable.Body.S, color: Tokens.Color.Base.Content[2] }}>
+                              <span style={{ fontWeight: 600, color: Tokens.Color.Accent.Content[2] }}>How it works: </span>
+                              The tag <code>{`{{row}}`}</code> will be replaced by the current row number (e.g. 2, 3, 4) for every cell in this column.
+                          </p>
+                          <div style={{ marginTop: Tokens.Space[2], padding: Tokens.Space[2], backgroundColor: Tokens.Color.Base.Surface[1], borderRadius: 4, fontSize: '11px', fontFamily: 'monospace', color: Tokens.Color.Base.Content[3] }}>
+                              Example: =A{'{{row}}'} + B{'{{row}}'} &rarr; =A2 + B2
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div style={{ padding: Tokens.Space[5], borderTop: `1px solid ${Tokens.Color.Base.Border[1]}`, display: 'flex', justifyContent: 'flex-end', gap: Tokens.Space[2], backgroundColor: Tokens.Color.Base.Surface[2] }}>
+                      <Button variant="ghost" onClick={() => setManualFormulaCol(null)}>Cancel</Button>
+                      <Button variant="primary" onClick={applyManualFormula}>Apply Formula</Button>
+                  </div>
+              </motion.div>
+           </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

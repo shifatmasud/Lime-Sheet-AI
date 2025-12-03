@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PaperPlaneRight, Sparkle, X, CaretDown, Plus, Trash, ChartBar, ChatCircleDots } from 'phosphor-react';
@@ -20,6 +21,7 @@ interface ChatInterfaceProps {
   onClose: () => void;
   data: any;
   headers: any;
+  isDark: boolean;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -33,7 +35,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isOpen,
   onClose,
   data,
-  headers
+  headers,
+  isDark
 }) => {
   const [input, setInput] = useState('');
   const [activeTab, setActiveTab] = useState<'chat' | 'dashboard'>('chat');
@@ -81,6 +84,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     },
   };
 
+  const glassStyle = isDark ? S.glassDark : S.glass;
+
   return (
     <motion.div
       initial="closed"
@@ -95,7 +100,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         top: isMobile ? Tokens.Space[10] : Tokens.Space[10], // On desktop, top spacing is managed by height
         width: isMobile ? '100%' : '500px',
         maxHeight: isMobile ? '100%' : 'calc(100vh - 48px)',
-        backgroundColor: isMobile ? Tokens.Color.Base.Surface[1] : S.glass.backgroundColor,
+        backgroundColor: isMobile ? Tokens.Color.Base.Surface[1] : glassStyle.backgroundColor,
         backdropFilter: 'blur(24px)',
         borderRadius: isMobile ? `${Tokens.Effect.Radius.L} ${Tokens.Effect.Radius.L} 0 0` : Tokens.Effect.Radius.L,
         boxShadow: Tokens.Effect.Shadow.Float,
@@ -103,7 +108,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        border: `1px solid ${Tokens.Color.Base.Border[1]}`,
+        border: isMobile ? `1px solid ${Tokens.Color.Base.Border[1]}` : glassStyle.border,
       }}
     >
       {/* Header Tabs */}
@@ -111,7 +116,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           display: 'flex',
           flexDirection: 'column',
           borderBottom: `1px solid ${Tokens.Color.Base.Border[1]}`,
-          backgroundColor: isMobile ? Tokens.Color.Base.Surface[2] : 'rgba(255,255,255,0.5)',
+          backgroundColor: isMobile ? Tokens.Color.Base.Surface[2] : (isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)'),
       }}>
         <div style={{ ...S.flexBetween, padding: `${Tokens.Space[4]} ${Tokens.Space[5]}` }}>
             <div style={{ display: 'flex', gap: Tokens.Space[4] }}>
@@ -237,7 +242,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     {/* Input */}
                     <div style={{
                         padding: Tokens.Space[4],
-                        backgroundColor: isMobile ? Tokens.Color.Base.Surface[1] : 'rgba(255,255,255,0.8)',
+                        backgroundColor: isMobile ? Tokens.Color.Base.Surface[1] : (isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)'),
                         borderTop: `1px solid ${Tokens.Color.Base.Border[1]}`,
                     }}>
                         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: Tokens.Space[2], alignItems: 'center', backgroundColor: Tokens.Color.Base.Surface[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.Full, border: `1px solid ${Tokens.Color.Base.Border[1]}` }}>
@@ -339,7 +344,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                                             borderRadius: '4px', 
                                             border: `1px solid ${Tokens.Color.Base.Border[2]}`,
                                             fontSize: '12px',
-                                            backgroundColor: Tokens.Color.Base.Surface[1]
+                                            backgroundColor: Tokens.Color.Base.Surface[1],
+                                            color: Tokens.Color.Base.Content[1] // Explicit color for better theme support
                                         }}
                                      >
                                         {headers.map((h: string) => <option key={h} value={h}>{h}</option>)}

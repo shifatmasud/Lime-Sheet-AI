@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+
+import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import { SheetData, ColumnMeta, Row } from '../../types';
 import { Tokens, S, useIsMobile } from '../../utils/styles';
 import { Button } from '../Core/Button';
-import { Plus, Trash, DotsThreeVertical, Palette, ArrowsLeftRight, PencilSimple, Function as FunctionIcon } from 'phosphor-react';
+import { Plus, Trash, DotsThreeVertical, Palette, ArrowsLeftRight, PencilSimple, Function as FunctionIcon, Calculator } from 'phosphor-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { evaluateFormula } from '../../utils/evaluator';
 
 // --- Types ---
 
@@ -19,6 +21,7 @@ interface TableProps {
   onDeleteRow?: (rowIndex: number) => void;
   onDeleteColumn?: (colIndex: number) => void;
   onSmartFormula?: (colIndex: number) => void;
+  onManualFormula?: (colIndex: number) => void;
 }
 
 // --- Sub-components ---
@@ -44,10 +47,11 @@ interface HeaderCellProps {
   onColorChange: (color: string) => void;
   onDelete: () => void;
   onSmartFormula?: () => void;
+  onManualFormula?: () => void;
 }
 
 const HeaderCell: React.FC<HeaderCellProps> = ({ 
-  value, index, width, color, onChange, onResizeStart, onAutoResize, onColorChange, onDelete, onSmartFormula 
+  value, index, width, color, onChange, onResizeStart, onAutoResize, onColorChange, onDelete, onSmartFormula, onManualFormula
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
@@ -113,6 +117,17 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
   // Use high contrast text if a column color is active, otherwise use default secondary content color
   const textColor = isActiveColor ? Tokens.Color.Base.Content[1] : Tokens.Color.Base.Content[2];
   const inputColor = isActiveColor ? Tokens.Color.Base.Content[1] : Tokens.Color.Accent.Content[2];
+
+  // Helper to get Column Letter (A, B, AA)
+  const getColLetter = (idx: number) => {
+      let letter = '';
+      let temp = idx;
+      while (temp >= 0) {
+          letter = String.fromCharCode((temp % 26) + 65) + letter;
+          temp = Math.floor(temp / 26) - 1;
+      }
+      return letter;
+  };
 
   return (
     <th 
@@ -194,9 +209,18 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
                   textOverflow: 'ellipsis',
                   opacity: isPressing ? 0.6 : 1,
                   transform: isPressing ? 'scale(0.98)' : 'scale(1)',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  gap: '6px'
               }}
             >
+              <span style={{ 
+                color: isActiveColor ? color : Tokens.Color.Base.Content[3], 
+                opacity: isActiveColor ? 1 : 0.7, 
+                fontSize: '10px', 
+                fontWeight: isActiveColor ? 700 : 400 
+              }}>
+                {getColLetter(index)}
+              </span>
               {value}
             </div>
           )}
@@ -242,7 +266,7 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
                    <span style={Tokens.Type.Readable.Label.S}>Rename Column</span>
                 </div>
 
-                {/* Formula Option */}
+                {/* Smart Formula Option */}
                 <div 
                   onClick={(e) => { 
                     e.stopPropagation();
@@ -255,6 +279,21 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
                 >
                    <FunctionIcon size={16} weight="bold" />
                    <span style={Tokens.Type.Readable.Label.S}>Smart Formula</span>
+                </div>
+
+                {/* Manual Formula Option */}
+                <div 
+                  onClick={(e) => { 
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    onManualFormula?.();
+                  }}
+                  style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Base.Content[1] }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                   <Calculator size={16} weight="bold" />
+                   <span style={Tokens.Type.Readable.Label.S}>Manual Formula</span>
                 </div>
 
                 {/* Fit Content Option */}
@@ -356,19 +395,79 @@ const measureTextWidth = (text: string, font: string): number => {
   return 0;
 };
 
-// --- Memoized Row ---
+// --- Smart Cell ---
+interface SmartCellProps {
+    value: string;
+    rIndex: number;
+    cIndex: number;
+    data: SheetData; // Needed for evaluation
+    onChange?: (r: number, c: number, v: string) => void;
+    label: string;
+}
+
+const SmartCell: React.FC<SmartCellProps> = ({ value, rIndex, cIndex, data, onChange, label }) => {
+    const [isFocused, setIsFocused] = useState(false);
+
+    // Calculate display value
+    const displayValue = useMemo(() => {
+        if (isFocused) return value;
+        if (value.startsWith('=')) {
+            return evaluateFormula(value, data);
+        }
+        return value;
+    }, [value, data, isFocused]);
+
+    const isFormula = value.startsWith('=') && !isFocused;
+    const isError = isFormula && displayValue === '#ERROR';
+
+    return (
+        <input
+            value={displayValue}
+            onChange={(e) => onChange?.(rIndex, cIndex, e.target.value)}
+            aria-label={label}
+            style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                outline: 'none',
+                padding: `${Tokens.Space[3]} ${Tokens.Space[5]}`,
+                backgroundColor: 'transparent', 
+                color: isError ? Tokens.Color.Feedback.Error : (isFormula ? Tokens.Color.Accent.Content[2] : Tokens.Color.Base.Content[1]),
+                ...Tokens.Type.Readable.Body.M,
+                fontWeight: isFormula ? 600 : 400,
+                minHeight: '48px',
+                transition: 'background-color 0.2s'
+            }}
+            onFocus={(e) => {
+                setIsFocused(true);
+                e.target.style.boxShadow = `inset 0 0 0 2px ${Tokens.Color.Accent.Surface[3]}`;
+                e.target.style.zIndex = '1';
+                e.target.style.position = 'relative';
+            }}
+            onBlur={(e) => {
+                setIsFocused(false);
+                e.target.style.boxShadow = 'none';
+                e.target.style.zIndex = 'auto';
+            }}
+        />
+    );
+};
+
+// --- Row ---
 
 interface TableRowProps {
   row: Row;
   rIndex: number;
   headers: string[];
-  // Removed columnMeta to improve performance and rely on colgroup
+  data: SheetData; // Pass full data for formula evaluation
   onCellChange?: (rowIndex: number, colIndex: number, value: string) => void;
   onDeleteRow?: (rowIndex: number) => void;
   indexCellStyle: React.CSSProperties;
 }
 
-const TableRow = memo(({ row, rIndex, headers, onCellChange, onDeleteRow, indexCellStyle }: TableRowProps) => {
+// Removing memoization for row because formulas require full data context awareness.
+// Optimization can be added later if needed.
+const TableRow: React.FC<TableRowProps> = ({ row, rIndex, headers, data, onCellChange, onDeleteRow, indexCellStyle }) => {
   return (
     <tr className="table-row">
       <td style={indexCellStyle}>
@@ -401,31 +500,13 @@ const TableRow = memo(({ row, rIndex, headers, onCellChange, onDeleteRow, indexC
       {row.map((cell, cIndex) => {
         return (
           <td key={cIndex} style={{ padding: 0, borderBottom: `1px solid ${Tokens.Color.Base.Border[1]}` }}>
-            <input
-              value={cell.value}
-              onChange={(e) => onCellChange?.(rIndex, cIndex, e.target.value)}
-              aria-label={`Row ${rIndex + 1}, ${headers[cIndex]}`}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                outline: 'none',
-                padding: `${Tokens.Space[3]} ${Tokens.Space[5]}`,
-                backgroundColor: 'transparent', // Make transparent so colgroup color shows
-                color: Tokens.Color.Base.Content[1],
-                ...Tokens.Type.Readable.Body.M,
-                minHeight: '48px',
-                transition: 'background-color 0.2s'
-              }}
-              onFocus={(e) => {
-                  e.target.style.boxShadow = `inset 0 0 0 2px ${Tokens.Color.Accent.Surface[3]}`;
-                  e.target.style.zIndex = '1';
-                  e.target.style.position = 'relative';
-              }}
-              onBlur={(e) => {
-                  e.target.style.boxShadow = 'none';
-                  e.target.style.zIndex = 'auto';
-              }}
+            <SmartCell 
+                value={cell.value}
+                rIndex={rIndex}
+                cIndex={cIndex}
+                data={data}
+                onChange={onCellChange}
+                label={`Row ${rIndex + 1}, ${headers[cIndex]}`}
             />
           </td>
         );
@@ -433,16 +514,13 @@ const TableRow = memo(({ row, rIndex, headers, onCellChange, onDeleteRow, indexC
       <td style={{ backgroundColor: 'transparent', borderBottom: `1px solid ${Tokens.Color.Base.Border[1]}` }} />
     </tr>
   );
-}, (prev, next) => {
-  // Custom comparison for performance
-  return prev.row === next.row && prev.headers === next.headers;
-});
+};
 
 
 // --- Main Table ---
 
 export const Table: React.FC<TableProps> = ({ 
-  headers, data, columnMeta, onCellChange, onHeaderChange, onColumnMetaChange, onAddRow, onAddColumn, onDeleteRow, onDeleteColumn, onSmartFormula 
+  headers, data, columnMeta, onCellChange, onHeaderChange, onColumnMetaChange, onAddRow, onAddColumn, onDeleteRow, onDeleteColumn, onSmartFormula, onManualFormula 
 }) => {
   const resizingRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
 
@@ -479,6 +557,7 @@ export const Table: React.FC<TableProps> = ({
     let maxCellWidth = 0;
     const rowsToCheck = data.slice(0, 100); 
     rowsToCheck.forEach(row => {
+      // We use raw value here for sizing, which is approximation enough
       const cellValue = row[colIndex]?.value || '';
       const w = measureTextWidth(cellValue, '400 16px Inter') + 40; 
       if (w > maxCellWidth) maxCellWidth = w;
@@ -563,6 +642,7 @@ export const Table: React.FC<TableProps> = ({
                     onColorChange={(color) => onColumnMetaChange?.(i, { color })}
                     onDelete={() => onDeleteColumn?.(i)}
                     onSmartFormula={() => onSmartFormula?.(i)}
+                    onManualFormula={() => onManualFormula?.(i)}
                 />
               ))}
                <th style={{ width: 60, padding: 0, backgroundColor: Tokens.Color.Base.Surface[1], borderBottom: `1px solid ${Tokens.Color.Base.Border[2]}` }}>
@@ -583,6 +663,7 @@ export const Table: React.FC<TableProps> = ({
                 rIndex={rIndex}
                 row={row}
                 headers={headers}
+                data={data}
                 onCellChange={onCellChange}
                 onDeleteRow={onDeleteRow}
                 indexCellStyle={indexCellStyle}

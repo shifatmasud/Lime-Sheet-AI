@@ -1,3 +1,4 @@
+
 export const DEFAULT_HEADERS = ['Product', 'Q1 Sales', 'Q2 Sales', 'Q3 Sales', 'Q4 Sales'];
 export const DEFAULT_DATA = [
   [{ value: 'Wireless Earbuds' }, { value: '1200' }, { value: '1500' }, { value: '1100' }, { value: '2000' }],
@@ -14,6 +15,9 @@ RULES:
 1. If the user asks to MODIFY the data (e.g., "add a total column", "sort by sales", "fill missing values"):
    - You MUST return the COMPLETE updated CSV content in a code block tagged with 'csv'.
    - Do NOT abbreviate the data. Return the full dataset.
+   - **CRITICAL**: If the user asks for a calculation that can be represented by a standard spreadsheet formula (e.g., Sums, Averages, Multiplications, String Concatenation), you SHOULD write the formula into the cell (starting with '=') instead of the calculated static value, unless the user explicitly asks for values.
+     - Example: Write '=SUM(B2:D2)' instead of '500'.
+     - Assume the first row of data is Row 2 (Headers are Row 1).
 
 2. If the user asks for VISUALIZATION (e.g., "show me a chart", "plot revenue"):
    - You MUST return a JSON configuration in a code block tagged with 'json-chart'.
