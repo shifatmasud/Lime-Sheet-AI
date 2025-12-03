@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { ChartConfig, SheetData } from '../../types';
 import { Tokens } from '../../utils/styles';
+import { evaluateFormula } from '../../utils/evaluator';
 
 interface ChartRendererProps {
   config: ChartConfig;
@@ -16,7 +17,13 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config, data, head
   const chartData = data.map(row => {
     const obj: any = {};
     headers.forEach((header, index) => {
-      const val = row[index]?.value;
+      let val = row[index]?.value;
+      
+      // Evaluate formula if present
+      if (val && val.startsWith('=')) {
+        val = evaluateFormula(val, data);
+      }
+
       const num = parseFloat(val);
       obj[header] = isNaN(num) ? val : num;
     });
