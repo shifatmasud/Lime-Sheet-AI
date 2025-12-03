@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { SheetData, ColumnMeta, Row } from '../../types';
 import { Tokens, S, useIsMobile } from '../../utils/styles';
 import { Button } from '../Core/Button';
-import { Plus, Trash, DotsThreeVertical, Palette, ArrowsLeftRight, PencilSimple } from 'phosphor-react';
+import { Plus, Trash, DotsThreeVertical, Palette, ArrowsLeftRight, PencilSimple, Function as FunctionIcon } from 'phosphor-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Types ---
@@ -18,6 +18,7 @@ interface TableProps {
   onAddColumn?: () => void;
   onDeleteRow?: (rowIndex: number) => void;
   onDeleteColumn?: (colIndex: number) => void;
+  onSmartFormula?: (colIndex: number) => void;
 }
 
 // --- Sub-components ---
@@ -42,10 +43,11 @@ interface HeaderCellProps {
   onAutoResize: () => void;
   onColorChange: (color: string) => void;
   onDelete: () => void;
+  onSmartFormula?: () => void;
 }
 
 const HeaderCell: React.FC<HeaderCellProps> = ({ 
-  value, index, width, color, onChange, onResizeStart, onAutoResize, onColorChange, onDelete 
+  value, index, width, color, onChange, onResizeStart, onAutoResize, onColorChange, onDelete, onSmartFormula 
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
@@ -240,6 +242,21 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
                    <span style={Tokens.Type.Readable.Label.S}>Rename Column</span>
                 </div>
 
+                {/* Formula Option */}
+                <div 
+                  onClick={(e) => { 
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    onSmartFormula?.();
+                  }}
+                  style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Accent.Content[2] }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                   <FunctionIcon size={16} weight="bold" />
+                   <span style={Tokens.Type.Readable.Label.S}>Smart Formula</span>
+                </div>
+
                 {/* Fit Content Option */}
                 <div 
                   onClick={(e) => { 
@@ -425,7 +442,7 @@ const TableRow = memo(({ row, rIndex, headers, onCellChange, onDeleteRow, indexC
 // --- Main Table ---
 
 export const Table: React.FC<TableProps> = ({ 
-  headers, data, columnMeta, onCellChange, onHeaderChange, onColumnMetaChange, onAddRow, onAddColumn, onDeleteRow, onDeleteColumn 
+  headers, data, columnMeta, onCellChange, onHeaderChange, onColumnMetaChange, onAddRow, onAddColumn, onDeleteRow, onDeleteColumn, onSmartFormula 
 }) => {
   const resizingRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
 
@@ -545,6 +562,7 @@ export const Table: React.FC<TableProps> = ({
                     onAutoResize={() => handleAutoResize(i)}
                     onColorChange={(color) => onColumnMetaChange?.(i, { color })}
                     onDelete={() => onDeleteColumn?.(i)}
+                    onSmartFormula={() => onSmartFormula?.(i)}
                 />
               ))}
                <th style={{ width: 60, padding: 0, backgroundColor: Tokens.Color.Base.Surface[1], borderBottom: `1px solid ${Tokens.Color.Base.Border[2]}` }}>

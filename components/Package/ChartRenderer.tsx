@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, 
+  BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
 } from 'recharts';
 import { ChartConfig, SheetData } from '../../types';
@@ -28,7 +28,9 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config, data, head
     Tokens.Color.Base.Content[1], 
     Tokens.Color.Base.Content[3], 
     Tokens.Color.Feedback.Warning, 
-    Tokens.Color.Feedback.Error
+    Tokens.Color.Feedback.Error,
+    '#8b5cf6',
+    '#ec4899'
   ];
 
   const renderChart = () => {
@@ -62,6 +64,19 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config, data, head
             ))}
           </LineChart>
         );
+      case 'area':
+        return (
+          <AreaChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={Tokens.Color.Base.Border[1]} />
+            <XAxis dataKey={config.dataKey} axisLine={false} tickLine={false} tick={{fill: Tokens.Color.Base.Content[2], fontSize: 12}} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{fill: Tokens.Color.Base.Content[2], fontSize: 12}} />
+            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: Tokens.Effect.Shadow.Soft }} />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
+            {config.series.map((key, i) => (
+              <Area key={key} type="monotone" dataKey={key} stackId="1" stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.6} />
+            ))}
+          </AreaChart>
+        );
        case 'pie':
          return (
            <PieChart>
@@ -82,7 +97,20 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config, data, head
              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: Tokens.Effect.Shadow.Soft }} />
              <Legend />
            </PieChart>
-         )
+         );
+       case 'radar':
+          return (
+            <RadarChart outerRadius="70%" data={chartData}>
+              <PolarGrid stroke={Tokens.Color.Base.Border[2]} />
+              <PolarAngleAxis dataKey={config.dataKey} tick={{ fill: Tokens.Color.Base.Content[2], fontSize: 12 }} />
+              <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
+              {config.series.map((key, i) => (
+                <Radar key={key} name={key} dataKey={key} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.4} />
+              ))}
+              <Legend wrapperStyle={{ paddingTop: '20px' }} />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: Tokens.Effect.Shadow.Soft }} />
+            </RadarChart>
+          );
       default: return null;
     }
   };
@@ -97,11 +125,13 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config, data, head
     boxShadow: Tokens.Effect.Shadow.Soft,
     marginTop: Tokens.Space[4],
     marginBottom: Tokens.Space[4],
+    position: 'relative',
+    overflow: 'hidden'
   };
 
   return (
     <div style={containerStyle}>
-      <h3 style={{ ...Tokens.Type.Readable.Label.M, marginBottom: Tokens.Space[2], color: Tokens.Color.Base.Content[1] }}>{config.title}</h3>
+      <h3 style={{ ...Tokens.Type.Readable.Label.M, marginBottom: Tokens.Space[2], color: Tokens.Color.Base.Content[1] }}>{config.title || 'Untitled Chart'}</h3>
       <ResponsiveContainer width="100%" height="90%">
         {renderChart() || <div>Chart Type Not Supported</div>}
       </ResponsiveContainer>

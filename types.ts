@@ -12,10 +12,15 @@ export enum MessageType {
 }
 
 export interface ChartConfig {
-  type: 'bar' | 'line' | 'area' | 'pie';
+  type: 'bar' | 'line' | 'area' | 'pie' | 'radar';
   dataKey: string; // The key/header to use for X-axis or labels
   series: string[]; // Array of keys/headers to plot
   title?: string;
+}
+
+export interface DashboardItem {
+  id: string;
+  config: ChartConfig;
 }
 
 export interface Message {
@@ -38,6 +43,7 @@ export interface AppState {
   filename: string;
   isProcessing: boolean;
   messages: Message[];
+  dashboard: DashboardItem[];
   apiKey: string | null;
 }
 

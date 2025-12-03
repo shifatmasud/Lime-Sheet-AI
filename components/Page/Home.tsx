@@ -8,7 +8,7 @@ import { Header } from '../Section/Header';
 import { ChatInterface } from '../Package/ChatInterface';
 import { Button } from '../Core/Button';
 import { Background } from '../Core/Background';
-import { AppState, Message, MessageType, ChartConfig, ColumnMeta } from '../../types';
+import { AppState, Message, MessageType, ChartConfig, ColumnMeta, DashboardItem } from '../../types';
 import { DEFAULT_DATA, DEFAULT_HEADERS } from '../../constants';
 import { Tokens, injectTheme, useIsMobile } from '../../utils/styles';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,12 +21,14 @@ export const Home: React.FC = () => {
     filename: 'Untitled Sheet',
     isProcessing: false,
     messages: [],
+    dashboard: [],
     apiKey: process.env.API_KEY || null,
   });
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const isMobile = useIsMobile();
+  const [initialInput, setInitialInput] = useState(''); // Used for smart formulas
 
   // Initialize theme
   useEffect(() => {
@@ -170,6 +172,42 @@ export const Home: React.FC = () => {
     link.click();
   };
 
+  // Smart Formula Handler
+  const handleSmartFormula = useCallback((colIndex: number) => {
+      const headerName = state.headers[colIndex];
+      const prompt = `Calculate the values for column '${headerName}' using a formula that...`;
+      
+      // Add a system message to guide the user
+      const sysMsg: Message = {
+          id: uuidv4(),
+          type: MessageType.AI,
+          content: `I can help you apply a formula to '${headerName}'. What logic should I use?`,
+          timestamp: Date.now()
+      };
+
+      setState(prev => ({
+          ...prev,
+          messages: [...prev.messages, sysMsg]
+      }));
+      
+      setIsChatOpen(true);
+      // We could use a context provider or simpler state passing for the input value,
+      // but here we rely on the user seeing the prompt.
+  }, [state.headers]);
+
+  // Dashboard Handlers
+  const handleAddDashboardItem = (item: DashboardItem) => {
+    setState(prev => ({ ...prev, dashboard: [...prev.dashboard, item] }));
+  };
+
+  const handleRemoveDashboardItem = (id: string) => {
+    setState(prev => ({ ...prev, dashboard: prev.dashboard.filter(d => d.id !== id) }));
+  };
+
+  const handleUpdateDashboardItem = (item: DashboardItem) => {
+    setState(prev => ({ ...prev, dashboard: prev.dashboard.map(d => d.id === item.id ? item : d) }));
+  };
+
   const handleSendMessage = async (text: string) => {
     const userMsg: Message = {
       id: uuidv4(),
@@ -278,6 +316,7 @@ export const Home: React.FC = () => {
                 onAddColumn={handleAddColumn}
                 onDeleteRow={handleDeleteRow}
                 onDeleteColumn={handleDeleteColumn}
+                onSmartFormula={handleSmartFormula}
             />
           </motion.div>
       </main>
@@ -317,6 +356,10 @@ export const Home: React.FC = () => {
         isProcessing={state.isProcessing}
         data={state.data}
         headers={state.headers}
+        dashboard={state.dashboard}
+        onAddDashboardItem={handleAddDashboardItem}
+        onRemoveDashboardItem={handleRemoveDashboardItem}
+        onUpdateDashboardItem={handleUpdateDashboardItem}
       />
     </div>
   );
