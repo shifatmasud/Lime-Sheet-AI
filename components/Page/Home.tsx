@@ -339,7 +339,7 @@ export const Home: React.FC = () => {
 
       <main style={{ 
         flex: 1, 
-        overflow: 'hidden', 
+        overflowY: 'auto', 
         position: 'relative', 
         zIndex: 10, 
         padding: isMobile ? Tokens.Space[4] : Tokens.Space[8],
@@ -351,7 +351,7 @@ export const Home: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            style={{ flex: 1, overflow: 'hidden' }}
+            style={{ width: '100%', paddingBottom: Tokens.Space[8] }}
           >
              <Table 
                 headers={state.headers} 

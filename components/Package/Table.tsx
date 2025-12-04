@@ -572,7 +572,7 @@ export const Table: React.FC<TableProps> = ({
   // Styles
   const containerStyle: React.CSSProperties = {
     width: '100%',
-    height: '100%',
+    height: 'auto', // Changed from 100% to auto to fit content
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: Tokens.Color.Base.Surface[1],
@@ -612,7 +612,7 @@ export const Table: React.FC<TableProps> = ({
              .table-row:active .row-index { opacity: 0; }
            }
         `}</style>
-      <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+      <div style={{ width: '100%', overflowX: 'auto', position: 'relative' }}>
         <table style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }} aria-label="Data Sheet">
           <colgroup>
               <col style={{ width: 60, backgroundColor: Tokens.Color.Base.Surface[1] }} /> {/* Index Column */}
