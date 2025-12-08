@@ -1,5 +1,7 @@
 
-import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
+
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { SheetData, ColumnMeta, Row } from '../../types';
 import { Tokens, S, useIsMobile } from '../../utils/styles';
 import { Button } from '../Core/Button';
@@ -23,6 +25,26 @@ interface TableProps {
   onSmartFormula?: (colIndex: number) => void;
   onManualFormula?: (colIndex: number) => void;
 }
+
+// --- Portal Helper ---
+
+const Portal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const elRef = useRef<HTMLDivElement | null>(null);
+  if (elRef.current === null) {
+    elRef.current = document.createElement('div');
+  }
+
+  useEffect(() => {
+    const el = elRef.current!;
+    document.body.appendChild(el);
+    return () => {
+      document.body.removeChild(el);
+    };
+  }, []);
+
+  return createPortal(children, elRef.current);
+};
+
 
 // --- Sub-components ---
 
@@ -58,8 +80,12 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isPressing, setIsPressing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Refs for portal positioning
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number, left: number } | null>(null);
 
   useEffect(() => {
     if (!isEditing) setLocalValue(value);
@@ -72,16 +98,36 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
     }
   }, [isEditing]);
 
+  const toggleMenu = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (showMenu) {
+        setShowMenu(false);
+        setMenuPosition(null);
+    } else if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setMenuPosition({ top: rect.bottom + 4, left: rect.left });
+        setShowMenu(true);
+    }
+  }, [showMenu]);
+
   // Click outside to close menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowMenu(false);
+        setMenuPosition(null);
       }
     };
     if (showMenu) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
+
+  const handleMenuAction = useCallback((callback?: () => void) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setMenuPosition(null);
+    if (callback) setTimeout(callback, 50); // Timeout helps prevent React state race conditions
+  }, []);
 
   const commitChange = () => {
     setIsEditing(false);
@@ -111,14 +157,10 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
   };
 
   const isActiveColor = color && color !== 'transparent';
-  // We use transparent background because the colgroup handles the color now
   const bgColor = 'transparent'; 
-  
-  // Use high contrast text if a column color is active, otherwise use default secondary content color
   const textColor = isActiveColor ? Tokens.Color.Base.Content[1] : Tokens.Color.Base.Content[2];
   const inputColor = isActiveColor ? Tokens.Color.Base.Content[1] : Tokens.Color.Accent.Content[2];
 
-  // Helper to get Column Letter (A, B, AA)
   const getColLetter = (idx: number) => {
       let letter = '';
       let temp = idx;
@@ -142,20 +184,19 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
         padding: 0, 
         textAlign: 'left', 
         userSelect: 'none', 
-        zIndex: showMenu ? 30 : 10, 
+        zIndex: 10,
         transition: 'background-color 0.3s, border-color 0.3s', 
       }}
     >
-      {/* Colored Top Indicator */}
       {isActiveColor && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', backgroundColor: color }} />
       )}
 
       <div style={{ height: '56px', position: 'relative', display: 'flex', alignItems: 'center', paddingLeft: Tokens.Space[3], paddingRight: Tokens.Space[1] }}>
         
-        {/* Color Dot Trigger */}
         <div 
-           onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+           ref={triggerRef}
+           onClick={toggleMenu}
            style={{
              width: '12px',
              height: '12px',
@@ -170,7 +211,6 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
            title="Column Settings"
         />
 
-        {/* Input / Text */}
         <div style={{ flex: 1, height: '100%', position: 'relative' }}>
           {isEditing ? (
             <input
@@ -226,138 +266,77 @@ const HeaderCell: React.FC<HeaderCellProps> = ({
           )}
         </div>
 
-        {/* Menu Dropdown */}
         <AnimatePresence>
-          {showMenu && (
-             <motion.div
-                ref={menuRef}
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                style={{
-                  position: 'absolute',
-                  top: '48px',
-                  left: '8px',
-                  width: '200px',
-                  backgroundColor: Tokens.Color.Base.Surface[1],
-                  borderRadius: Tokens.Effect.Radius.M,
-                  boxShadow: Tokens.Effect.Shadow.Float,
-                  border: `1px solid ${Tokens.Color.Base.Border[1]}`,
-                  padding: Tokens.Space[3],
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: Tokens.Space[2],
-                  cursor: 'default',
-                  zIndex: 100
-                }}
-             >
-                {/* Rename Option */}
-                <div 
-                  onClick={(e) => { 
-                    e.stopPropagation();
-                    setShowMenu(false);
-                    setIsEditing(true);
-                  }}
-                  style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Base.Content[1] }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                   <PencilSimple size={16} />
-                   <span style={Tokens.Type.Readable.Label.S}>Rename Column</span>
-                </div>
+          {showMenu && menuPosition && (
+             <Portal>
+                <motion.div
+                    ref={menuRef}
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    style={{
+                      position: 'fixed',
+                      top: menuPosition.top,
+                      left: menuPosition.left,
+                      width: '200px',
+                      backgroundColor: Tokens.Color.Base.Surface[1],
+                      borderRadius: Tokens.Effect.Radius.M,
+                      boxShadow: Tokens.Effect.Shadow.Float,
+                      border: `1px solid ${Tokens.Color.Base.Border[1]}`,
+                      padding: Tokens.Space[3],
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: Tokens.Space[2],
+                      cursor: 'default',
+                      zIndex: 1000
+                    }}
+                 >
+                    <div onClick={handleMenuAction(() => setIsEditing(true))} style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Base.Content[1] }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} >
+                       <PencilSimple size={16} />
+                       <span style={Tokens.Type.Readable.Label.S}>Rename Column</span>
+                    </div>
 
-                {/* Smart Formula Option */}
-                <div 
-                  onClick={(e) => { 
-                    e.stopPropagation();
-                    setShowMenu(false);
-                    onSmartFormula?.();
-                  }}
-                  style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Accent.Content[2] }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                   <FunctionIcon size={16} weight="bold" />
-                   <span style={Tokens.Type.Readable.Label.S}>Smart Formula</span>
-                </div>
+                    <div onClick={handleMenuAction(onSmartFormula)} style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Accent.Content[2] }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} >
+                       <FunctionIcon size={16} weight="bold" />
+                       <span style={Tokens.Type.Readable.Label.S}>Smart Formula</span>
+                    </div>
 
-                {/* Manual Formula Option */}
-                <div 
-                  onClick={(e) => { 
-                    e.stopPropagation();
-                    setShowMenu(false);
-                    onManualFormula?.();
-                  }}
-                  style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Base.Content[1] }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                   <Calculator size={16} weight="bold" />
-                   <span style={Tokens.Type.Readable.Label.S}>Manual Formula</span>
-                </div>
+                    <div onClick={handleMenuAction(onManualFormula)} style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Base.Content[1] }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} >
+                       <Calculator size={16} weight="bold" />
+                       <span style={Tokens.Type.Readable.Label.S}>Manual Formula</span>
+                    </div>
 
-                {/* Fit Content Option */}
-                <div 
-                  onClick={(e) => { 
-                    e.stopPropagation();
-                    setShowMenu(false);
-                    onAutoResize();
-                  }}
-                  style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Base.Content[1] }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                   <ArrowsLeftRight size={16} />
-                   <span style={Tokens.Type.Readable.Label.S}>Fit to Content</span>
-                </div>
+                    <div onClick={handleMenuAction(onAutoResize)} style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Base.Content[1] }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} >
+                       <ArrowsLeftRight size={16} />
+                       <span style={Tokens.Type.Readable.Label.S}>Fit to Content</span>
+                    </div>
 
-                <div style={{ height: '1px', backgroundColor: Tokens.Color.Base.Border[1], margin: '4px 0' }} />
+                    <div style={{ height: '1px', backgroundColor: Tokens.Color.Base.Border[1], margin: '4px 0' }} />
 
-                <div>
-                   <span style={{ ...Tokens.Type.Readable.Label.S, color: Tokens.Color.Base.Content[3], display: 'block', marginBottom: Tokens.Space[2], paddingLeft: Tokens.Space[2] }}>Color Tag</span>
-                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingLeft: Tokens.Space[2] }}>
-                      {COLUMN_COLORS.map(c => (
-                        <div 
-                          key={c}
-                          onClick={() => onColorChange(c)}
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            backgroundColor: c === 'transparent' ? Tokens.Color.Base.Surface[3] : c,
-                            border: `1px solid ${c === color ? Tokens.Color.Base.Content[1] : Tokens.Color.Base.Border[2]}`,
-                            cursor: 'pointer',
-                            position: 'relative'
-                          }}
-                        >
-                          {c === 'transparent' && (
-                             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(45deg)', width: '1px', height: '12px', backgroundColor: Tokens.Color.Base.Content[3] }} />
-                          )}
-                        </div>
-                      ))}
-                   </div>
-                </div>
+                    <div>
+                       <span style={{ ...Tokens.Type.Readable.Label.S, color: Tokens.Color.Base.Content[3], display: 'block', marginBottom: Tokens.Space[2], paddingLeft: Tokens.Space[2] }}>Color Tag</span>
+                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingLeft: Tokens.Space[2] }}>
+                          {COLUMN_COLORS.map(c => (
+                            <div key={c} onClick={handleMenuAction(() => onColorChange(c))} style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: c === 'transparent' ? Tokens.Color.Base.Surface[3] : c, border: `1px solid ${c === color ? Tokens.Color.Base.Content[1] : Tokens.Color.Base.Border[2]}`, cursor: 'pointer', position: 'relative' }} >
+                              {c === 'transparent' && (
+                                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(45deg)', width: '1px', height: '12px', backgroundColor: Tokens.Color.Base.Content[3] }} />
+                              )}
+                            </div>
+                          ))}
+                       </div>
+                    </div>
 
-                <div style={{ height: '1px', backgroundColor: Tokens.Color.Base.Border[1], margin: '4px 0' }} />
+                    <div style={{ height: '1px', backgroundColor: Tokens.Color.Base.Border[1], margin: '4px 0' }} />
 
-                <div 
-                  onClick={(e) => { 
-                    e.stopPropagation();
-                    setShowMenu(false);
-                    setTimeout(onDelete, 50);
-                  }}
-                  style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Feedback.Error }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                   <Trash size={16} />
-                   <span style={Tokens.Type.Readable.Label.S}>Delete Column</span>
-                </div>
-             </motion.div>
+                    <div onClick={handleMenuAction(onDelete)} style={{ ...S.flexCenter, justifyContent: 'flex-start', gap: Tokens.Space[2], padding: Tokens.Space[2], borderRadius: Tokens.Effect.Radius.S, cursor: 'pointer', color: Tokens.Color.Feedback.Error }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = Tokens.Color.Base.Surface[2]} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} >
+                       <Trash size={16} />
+                       <span style={Tokens.Type.Readable.Label.S}>Delete Column</span>
+                    </div>
+                </motion.div>
+             </Portal>
           )}
         </AnimatePresence>
 
-        {/* Resize Handle */}
         <div 
             onMouseDown={onResizeStart}
             onDoubleClick={(e) => { e.stopPropagation(); onAutoResize(); }}
@@ -578,7 +557,7 @@ export const Table: React.FC<TableProps> = ({
     backgroundColor: Tokens.Color.Base.Surface[1],
     borderRadius: Tokens.Effect.Radius.XL,
     boxShadow: Tokens.Effect.Shadow.Soft,
-    overflow: 'hidden',
+    overflow: 'visible',
     border: `1px solid ${Tokens.Color.Base.Border[1]}`,
   };
 
@@ -612,7 +591,7 @@ export const Table: React.FC<TableProps> = ({
              .table-row:active .row-index { opacity: 0; }
            }
         `}</style>
-      <div style={{ width: '100%', overflowX: 'auto', position: 'relative' }}>
+      <div style={{ width: '100%', overflowX: 'auto', position: 'relative', zIndex: 21 }}>
         <table style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }} aria-label="Data Sheet">
           <colgroup>
               <col style={{ width: 60, backgroundColor: Tokens.Color.Base.Surface[1] }} /> {/* Index Column */}
