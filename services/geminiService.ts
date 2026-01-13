@@ -1,10 +1,8 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from "../constants";
 
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
-  private modelId = "gemini-2.5-flash"; // Changed from gemini-3-pro-preview to gemini-2.5-flash
 
   constructor() {
     // API key is handled via the app state passed in methods, or environment if available
@@ -18,7 +16,7 @@ export class GeminiService {
     this.ai = new GoogleGenAI({ apiKey: key });
   }
 
-  async processQuery(csvContext: string, userPrompt: string): Promise<string> {
+  async processQuery(csvContext: string, userPrompt: string, model: string): Promise<string> {
     if (!this.ai) throw new Error("API Key not set");
 
     const fullPrompt = `
@@ -33,7 +31,7 @@ export class GeminiService {
 
     try {
       const response = await this.ai.models.generateContent({
-        model: this.modelId,
+        model: model,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
           thinkingConfig: { thinkingBudget: 1024 }, // Enable thinking for complex data ops

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -60,7 +59,7 @@
         background: var(--c-base-c-3);
       }
     </style>
-  <script type="importmap">
+  <!-- <script type="importmap">
 {
   "imports": {
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
@@ -77,23 +76,9 @@
     "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1"
   }
 }
-</script>
+</script> -->
 </head>
   <body>
-    <script type="text/javascript">
-      // Simulate process.env for client-side environment if not already present.
-      // This allows the application to access API keys as if they were Node.js environment variables.
-      if (typeof window.process === 'undefined') {
-        window.process = { env: {} };
-      }
-      if (typeof window.process.env === 'undefined') {
-        window.process.env = {};
-      }
-      // Hardcode the API key directly into the client-side environment.
-      // This is done to satisfy the user's request for a working API key
-      // in a client-side ES module setup where traditional process.env is not available.
-      window.process.env.API_KEY = 'AIzaSyD166h8VyIQgWal0VRj898sLmBquLvEHoI';
-    </script>
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
   </body>

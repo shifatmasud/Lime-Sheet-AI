@@ -14,12 +14,11 @@ An ultra-minimalist, intelligent spreadsheet studio powered by Gemini.
 - **Framework**: React 18 (via ESM.sh)
 - **State Management**: React Hooks (Atomic, Durable)
 - **Styling**: JS Objects + Design Tokens (No Tailwind)
-- **Motion**: Framer Motion & GSAP
-- **3D**: Three.js (Reactive Background)
+- **Motion**: Framer Motion
 - **AI**: @google/genai SDK
 
 ## Directory Structure
-- `components/Core`: Basic building blocks (Button, Input, Background).
+- `components/Core`: Basic building blocks (Button, Input).
 - `components/Package`: Complex features (Table, Chat, Chart).
 - `components/Section`: Layout regions (Header).
 - `components/Page`: Full page layouts (Home).

@@ -1,6 +1,5 @@
-
 import React, { useRef, useState, useEffect } from 'react';
-import { DownloadSimple, UploadSimple, Link as LinkIcon, FileCsv, Sun, Moon, GearSix } from 'phosphor-react';
+import { DownloadSimple, UploadSimple, Link as LinkIcon, FileCsv, Sun, Moon } from 'phosphor-react';
 import { Button } from '../Core/Button';
 import { Input } from '../Core/Input';
 import { Tokens, S, useIsMobile } from '../../utils/styles';
@@ -11,12 +10,11 @@ interface HeaderProps {
   onExportCSV: () => void;
   onRename: (newName: string) => void;
   onToggleTheme: () => void;
-  onOpenSettings: () => void; // New prop for opening settings
   isDark: boolean;
   fileName: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onImportCSV, onImportURL, onExportCSV, onRename, onToggleTheme, onOpenSettings, isDark, fileName }) => {
+export const Header: React.FC<HeaderProps> = ({ onImportCSV, onImportURL, onExportCSV, onRename, onToggleTheme, isDark, fileName }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [url, setUrl] = useState('');
@@ -188,9 +186,6 @@ export const Header: React.FC<HeaderProps> = ({ onImportCSV, onImportURL, onExpo
 
             <Button variant="ghost" onClick={onToggleTheme} title={isDark ? "Light Mode" : "Dark Mode"} style={iconButtonStyle}>
                {isDark ? <Sun size={18} weight="fill" /> : <Moon size={18} weight="fill" />}
-            </Button>
-            <Button variant="ghost" onClick={onOpenSettings} title="Settings" style={iconButtonStyle}>
-               <GearSix size={18} />
             </Button>
           </>
         )}

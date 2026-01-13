@@ -555,10 +555,7 @@ export const Table: React.FC<TableProps> = ({
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: Tokens.Color.Base.Surface[1],
-    borderRadius: Tokens.Effect.Radius.XL,
-    boxShadow: Tokens.Effect.Shadow.Soft,
     overflow: 'visible',
-    border: `1px solid ${Tokens.Color.Base.Border[1]}`,
   };
 
   const indexCellStyle: React.CSSProperties = {

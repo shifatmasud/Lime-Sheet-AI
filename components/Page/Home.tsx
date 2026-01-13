@@ -10,8 +10,6 @@ import { Header } from '../Section/Header';
 import { ChatInterface } from '../Package/ChatInterface';
 import { Button } from '../Core/Button';
 import { Input } from '../Core/Input';
-import { Background } from '../Core/Background';
-import { SettingsModal } from '../Core/SettingsModal'; // New import
 import { AppState, Message, MessageType, ChartConfig, ColumnMeta, DashboardItem } from '../../types';
 import { DEFAULT_DATA, DEFAULT_HEADERS } from '../../constants';
 import { Tokens, injectTheme, useIsMobile, S } from '../../utils/styles';
@@ -27,40 +25,33 @@ const FORMULA_TEMPLATES = [
 ];
 
 export const Home: React.FC = () => {
-  const [state, setState] = useState<AppState>(() => {
-    const storedApiKey = localStorage.getItem('geminiApiKey');
-    return {
-      data: DEFAULT_DATA,
-      headers: DEFAULT_HEADERS,
-      columnMeta: {},
-      filename: 'Untitled Sheet',
-      isProcessing: false,
-      messages: [],
-      dashboard: [],
-      apiKey: storedApiKey || process.env.API_KEY || null,
-    };
+  const [state, setState] = useState<AppState>({
+    data: DEFAULT_DATA,
+    headers: DEFAULT_HEADERS,
+    columnMeta: {},
+    filename: 'Untitled Sheet',
+    isProcessing: false,
+    messages: [],
+    dashboard: [],
+    apiKey: process.env.API_KEY || null,
+    model: 'gemini-3-flash-preview',
   });
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [showSettingsModal, setShowSettingsModal] = useState(false); // New state for settings modal
   const isMobile = useIsMobile();
   
   // Formula State
   const [manualFormulaCol, setManualFormulaCol] = useState<number | null>(null);
   const [formulaInput, setFormulaInput] = useState('');
 
-  // Initialize theme
+  // Initialize theme & API key
   useEffect(() => {
     injectTheme('light');
-  }, []);
-
-  // Ensure GeminiService is initialized with API Key from state
-  useEffect(() => {
     if (state.apiKey) {
       geminiService.setApiKey(state.apiKey);
     }
-  }, [state.apiKey]); // Run when apiKey in state changes
+  }, []);
 
   // Sync Meta with Headers length
   useEffect(() => {
@@ -221,13 +212,8 @@ export const Home: React.FC = () => {
   const handleManualFormula = useCallback((colIndex: number) => {
       setManualFormulaCol(colIndex);
       
-      // Attempt to auto-detect pattern from the first row of data
-      // Excel Logic: Header is Row 1, First Data Row is Row 2.
-      // So we look for the number '2' in the first data cell and assume it refers to the current row.
       const firstRowVal = state.data[0]?.[colIndex]?.value;
       if (firstRowVal && firstRowVal.startsWith('=')) {
-          // Replace '2' with '{{row}}' only if it seems to be part of a cell ref like A2, B2
-          // Regex looks for a non-digit followed by '2' followed by a non-digit or end of string
           const detected = firstRowVal.replace(/(\D)2(\D|$)/g, '$1{{row}}$2');
           setFormulaInput(detected);
       } else {
@@ -240,7 +226,6 @@ export const Home: React.FC = () => {
       
       setState(prev => {
           const newData = prev.data.map((row, index) => {
-              // Replace {{row}} with the spreadsheet row index (header is 1, so first data row is 2)
               const cellValue = formulaInput.replace(/{{row}}/g, (index + 2).toString());
               
               const newRow = [...row];
@@ -268,6 +253,16 @@ export const Home: React.FC = () => {
   const handleUpdateDashboardItem = (item: DashboardItem) => {
     setState(prev => ({ ...prev, dashboard: prev.dashboard.map(d => d.id === item.id ? item : d) }));
   };
+  
+  // Settings Handlers
+  const handleApiKeyChange = useCallback((key: string) => {
+    geminiService.setApiKey(key);
+    setState(prev => ({ ...prev, apiKey: key }));
+  }, []);
+
+  const handleModelChange = useCallback((model: string) => {
+    setState(prev => ({ ...prev, model }));
+  }, []);
 
   const handleSendMessage = async (text: string) => {
     const userMsg: Message = {
@@ -282,11 +277,25 @@ export const Home: React.FC = () => {
       messages: [...prev.messages, userMsg],
       isProcessing: true
     }));
+    
+    if (!state.apiKey) {
+      const errorMsg: Message = {
+        id: uuidv4(),
+        type: MessageType.SYSTEM,
+        content: `API Key not set. Please add your Gemini API key in the settings panel.`,
+        timestamp: Date.now()
+      };
+      setState(prev => ({
+        ...prev,
+        messages: [...prev.messages, errorMsg],
+        isProcessing: false
+      }));
+      return;
+    }
 
     try {
-      if (!state.apiKey) throw new Error("API Key required");
       const currentCSV = serializeCSV(state.headers, state.data);
-      const responseText = await geminiService.processQuery(currentCSV, text);
+      const responseText = await geminiService.processQuery(currentCSV, text, state.model);
 
       const csvMatch = responseText.match(/```csv\n([\s\S]*?)```/);
       const jsonChartMatch = responseText.match(/```json-chart\n([\s\S]*?)```/);
@@ -336,20 +345,8 @@ export const Home: React.FC = () => {
     }
   };
 
-  // API Key Settings Handlers
-  const handleSaveApiKey = useCallback((newKey: string) => {
-    localStorage.setItem('geminiApiKey', newKey);
-    setState(prev => ({ ...prev, apiKey: newKey }));
-  }, []);
-
-  const handleResetApiKey = useCallback(() => {
-    localStorage.removeItem('geminiApiKey');
-    setState(prev => ({ ...prev, apiKey: process.env.API_KEY || null }));
-  }, []);
-
   return (
     <div style={{ height: '100vh', width: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-      <Background />
 
       <Header 
         fileName={state.filename}
@@ -358,7 +355,6 @@ export const Home: React.FC = () => {
         onExportCSV={handleExportCSV}
         onRename={handleRenameFile}
         onToggleTheme={toggleTheme}
-        onOpenSettings={() => setShowSettingsModal(true)} // Pass handler
         isDark={theme === 'dark'}
       />
 
@@ -376,7 +372,14 @@ export const Home: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            style={{ width: '100%', paddingBottom: Tokens.Space[8] }}
+            style={{ 
+              width: '100%', 
+              marginBottom: Tokens.Space[8],
+              borderRadius: Tokens.Effect.Radius.XL,
+              overflow: 'clip',
+              boxShadow: Tokens.Effect.Shadow.Soft,
+              border: `1px solid ${Tokens.Color.Base.Border[1]}`,
+            }}
           >
              <Table 
                 headers={state.headers} 
@@ -435,6 +438,10 @@ export const Home: React.FC = () => {
         onRemoveDashboardItem={handleRemoveDashboardItem}
         onUpdateDashboardItem={handleUpdateDashboardItem}
         isDark={theme === 'dark'}
+        apiKey={state.apiKey}
+        model={state.model}
+        onApiKeyChange={handleApiKeyChange}
+        onModelChange={handleModelChange}
       />
 
       {/* Manual Formula Modal */}
@@ -538,15 +545,6 @@ export const Home: React.FC = () => {
            </div>
         )}
       </AnimatePresence>
-
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        currentApiKey={state.apiKey}
-        onSaveApiKey={handleSaveApiKey}
-        onResetApiKey={handleResetApiKey}
-      />
     </div>
   );
 };

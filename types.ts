@@ -45,6 +45,7 @@ export interface AppState {
   messages: Message[];
   dashboard: DashboardItem[];
   apiKey: string | null;
+  model: string;
 }
 
 // Styling Types

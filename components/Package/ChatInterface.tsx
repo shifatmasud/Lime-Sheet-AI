@@ -1,7 +1,8 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PaperPlaneRight, Sparkle, X, CaretDown, Plus, Trash, ChartBar, ChatCircleDots } from 'phosphor-react';
+import { PaperPlaneRight, Sparkle, X, CaretDown, Plus, Trash, ChartBar, ChatCircleDots, Gear } from 'phosphor-react';
 import { Message, MessageType, DashboardItem, ChartConfig } from '../../types';
 import { Button } from '../Core/Button';
 import { Input } from '../Core/Input';
@@ -22,6 +23,10 @@ interface ChatInterfaceProps {
   data: any;
   headers: any;
   isDark: boolean;
+  apiKey: string | null;
+  model: string;
+  onApiKeyChange: (key: string) => void;
+  onModelChange: (model: string) => void;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -36,10 +41,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onClose,
   data,
   headers,
-  isDark
+  isDark,
+  apiKey,
+  model,
+  onApiKeyChange,
+  onModelChange
 }) => {
   const [input, setInput] = useState('');
-  const [activeTab, setActiveTab] = useState<'chat' | 'dashboard'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'dashboard' | 'settings'>('chat');
+  const [tempApiKey, setTempApiKey] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
@@ -54,6 +64,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (!input.trim() || isProcessing) return;
     onSendMessage(input);
     setInput('');
+  };
+
+  const handleSaveApiKey = () => {
+    if (tempApiKey.trim()) {
+        onApiKeyChange(tempApiKey.trim());
+    }
   };
 
   const handleAddChart = () => {
@@ -97,9 +113,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         right: isMobile ? 0 : Tokens.Space[6],
         bottom: isMobile ? 0 : Tokens.Space[6],
         left: isMobile ? 0 : 'auto',
-        top: isMobile ? Tokens.Space[10] : Tokens.Space[10], // On desktop, top spacing is managed by height
+        top: isMobile ? Tokens.Space[10] : 'auto',
         width: isMobile ? '100%' : '500px',
-        maxHeight: isMobile ? '100%' : 'calc(100vh - 48px)',
+        height: isMobile ? 'auto' : '700px',
+        maxHeight: isMobile ? 'calc(100% - 48px)' : 'calc(100vh - 80px)',
         backgroundColor: isMobile ? Tokens.Color.Base.Surface[1] : glassStyle.backgroundColor,
         backdropFilter: 'blur(24px)',
         borderRadius: isMobile ? `${Tokens.Effect.Radius.L} ${Tokens.Effect.Radius.L} 0 0` : Tokens.Effect.Radius.L,
@@ -107,7 +124,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         zIndex: 100,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: 'clip',
         border: isMobile ? `1px solid ${Tokens.Color.Base.Border[1]}` : glassStyle.border,
       }}
     >
@@ -153,6 +170,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <ChartBar size={18} weight={activeTab === 'dashboard' ? 'fill' : 'regular'} />
                     Charts
                     {activeTab === 'dashboard' && <motion.div layoutId="tab" style={{ position: 'absolute', bottom: -17, left: 0, right: 0, height: 2, backgroundColor: Tokens.Color.Accent.Surface[3] }} />}
+                </div>
+                <div 
+                    onClick={() => setActiveTab('settings')}
+                    style={{ 
+                        ...Tokens.Type.Readable.Label.M, 
+                        color: activeTab === 'settings' ? Tokens.Color.Accent.Content[2] : Tokens.Color.Base.Content[3],
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 0',
+                        position: 'relative'
+                    }}
+                >
+                    <Gear size={18} weight={activeTab === 'settings' ? 'fill' : 'regular'} />
+                    Settings
+                    {activeTab === 'settings' && <motion.div layoutId="tab" style={{ position: 'absolute', bottom: -17, left: 0, right: 0, height: 2, backgroundColor: Tokens.Color.Accent.Surface[3] }} />}
                 </div>
             </div>
             <Button variant="icon" onClick={onClose} aria-label="Close Chat" style={{ color: Tokens.Color.Base.Content[3] }}>
@@ -269,7 +303,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         </form>
                     </div>
                 </motion.div>
-            ) : (
+            ) : activeTab === 'dashboard' ? (
                 <motion.div 
                     key="dashboard"
                     initial={{ opacity: 0, x: 20 }}
@@ -387,6 +421,58 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <Button variant="secondary" onClick={handleAddChart} icon={<Plus size={16} />} style={{ marginTop: Tokens.Space[2] }}>
                         Add Chart
                     </Button>
+                </motion.div>
+            ) : (
+              <motion.div 
+                    key="settings"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', padding: Tokens.Space[5], gap: Tokens.Space[6] }}
+                >
+                    <div>
+                        <h3 style={{...Tokens.Type.Readable.Label.L, color: Tokens.Color.Base.Content[1], marginBottom: Tokens.Space[3]}}>API Key</h3>
+                        <p style={{...Tokens.Type.Readable.Body.S, color: Tokens.Color.Base.Content[2], marginBottom: Tokens.Space[4]}}>
+                            Your API key is stored locally in your browser and never sent anywhere except to the Google Gemini API.
+                        </p>
+                        <div style={{display: 'flex', gap: Tokens.Space[2]}}>
+                            <Input
+                                type="password"
+                                placeholder="Enter your Gemini API Key"
+                                value={tempApiKey}
+                                onChange={(e) => setTempApiKey(e.target.value)}
+                            />
+                            <Button onClick={handleSaveApiKey}>Save</Button>
+                        </div>
+                        {apiKey && <p style={{...Tokens.Type.Readable.Body.S, color: Tokens.Color.Feedback.Success, marginTop: Tokens.Space[2]}}>API Key is set.</p>}
+                    </div>
+
+                    <div>
+                        <h3 style={{...Tokens.Type.Readable.Label.L, color: Tokens.Color.Base.Content[1], marginBottom: Tokens.Space[3]}}>AI Model</h3>
+                         <select 
+                            value={model}
+                            onChange={(e) => onModelChange(e.target.value)}
+                            style={{ 
+                                width: '100%',
+                                padding: Tokens.Space[3], 
+                                borderRadius: Tokens.Effect.Radius.M, 
+                                border: `1px solid ${Tokens.Color.Base.Border[2]}`,
+                                fontSize: '14px',
+                                backgroundColor: Tokens.Color.Base.Surface[1],
+                                color: Tokens.Color.Base.Content[1],
+                                appearance: 'none',
+                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                backgroundPosition: 'right 0.5rem center',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundSize: '1.5em 1.5em',
+                            }}
+                         >
+                            <option value="gemini-3-pro-preview">Gemini 3 Pro (Advanced Reasoning)</option>
+                            <option value="gemini-3-flash-preview">Gemini 3 Flash (Fast &amp; Cost-Effective)</option>
+                            <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                         </select>
+                    </div>
                 </motion.div>
             )}
           </AnimatePresence>

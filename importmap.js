@@ -8,8 +8,6 @@ const importMap = {
     "@google/genai": "https://esm.sh/@google/genai@0.1.2",
     "papaparse": "https://esm.sh/papaparse@5.4.1",
     "recharts": "https://esm.sh/recharts@2.12.0?external=react,react-dom",
-    "three": "https://esm.sh/three@0.160.0",
-    "gsap": "https://esm.sh/gsap@3.12.5",
     "uuid": "https://esm.sh/uuid@9.0.1"
   }
 };
