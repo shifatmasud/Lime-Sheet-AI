@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Sparkle, X, MagicWand, Function as FunctionIcon, Plus } from 'phosphor-react';
@@ -10,6 +11,7 @@ import { ChatInterface } from '../Package/ChatInterface';
 import { Button } from '../Core/Button';
 import { Input } from '../Core/Input';
 import { Background } from '../Core/Background';
+import { SettingsModal } from '../Core/SettingsModal'; // New import
 import { AppState, Message, MessageType, ChartConfig, ColumnMeta, DashboardItem } from '../../types';
 import { DEFAULT_DATA, DEFAULT_HEADERS } from '../../constants';
 import { Tokens, injectTheme, useIsMobile, S } from '../../utils/styles';
@@ -25,19 +27,23 @@ const FORMULA_TEMPLATES = [
 ];
 
 export const Home: React.FC = () => {
-  const [state, setState] = useState<AppState>({
-    data: DEFAULT_DATA,
-    headers: DEFAULT_HEADERS,
-    columnMeta: {},
-    filename: 'Untitled Sheet',
-    isProcessing: false,
-    messages: [],
-    dashboard: [],
-    apiKey: process.env.API_KEY || null,
+  const [state, setState] = useState<AppState>(() => {
+    const storedApiKey = localStorage.getItem('geminiApiKey');
+    return {
+      data: DEFAULT_DATA,
+      headers: DEFAULT_HEADERS,
+      columnMeta: {},
+      filename: 'Untitled Sheet',
+      isProcessing: false,
+      messages: [],
+      dashboard: [],
+      apiKey: storedApiKey || process.env.API_KEY || null,
+    };
   });
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [showSettingsModal, setShowSettingsModal] = useState(false); // New state for settings modal
   const isMobile = useIsMobile();
   
   // Formula State
@@ -330,6 +336,17 @@ export const Home: React.FC = () => {
     }
   };
 
+  // API Key Settings Handlers
+  const handleSaveApiKey = useCallback((newKey: string) => {
+    localStorage.setItem('geminiApiKey', newKey);
+    setState(prev => ({ ...prev, apiKey: newKey }));
+  }, []);
+
+  const handleResetApiKey = useCallback(() => {
+    localStorage.removeItem('geminiApiKey');
+    setState(prev => ({ ...prev, apiKey: process.env.API_KEY || null }));
+  }, []);
+
   return (
     <div style={{ height: '100vh', width: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
       <Background />
@@ -341,6 +358,7 @@ export const Home: React.FC = () => {
         onExportCSV={handleExportCSV}
         onRename={handleRenameFile}
         onToggleTheme={toggleTheme}
+        onOpenSettings={() => setShowSettingsModal(true)} // Pass handler
         isDark={theme === 'dark'}
       />
 
@@ -520,6 +538,15 @@ export const Home: React.FC = () => {
            </div>
         )}
       </AnimatePresence>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        currentApiKey={state.apiKey}
+        onSaveApiKey={handleSaveApiKey}
+        onResetApiKey={handleResetApiKey}
+      />
     </div>
   );
 };

@@ -1,9 +1,10 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from "../constants";
 
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
-  private modelId = "gemini-3-pro-preview"; // Using Pro for better reasoning with CSVs
+  private modelId = "gemini-2.5-flash"; // Changed from gemini-3-pro-preview to gemini-2.5-flash
 
   constructor() {
     // API key is handled via the app state passed in methods, or environment if available
