@@ -49,6 +49,13 @@ export const Home: React.FC = () => {
     injectTheme('light');
   }, []);
 
+  // Ensure GeminiService is initialized with API Key from state
+  useEffect(() => {
+    if (state.apiKey) {
+      geminiService.setApiKey(state.apiKey);
+    }
+  }, [state.apiKey]); // Run when apiKey in state changes
+
   // Sync Meta with Headers length
   useEffect(() => {
     setState(prev => {
