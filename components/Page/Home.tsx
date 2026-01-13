@@ -34,7 +34,7 @@ export const Home: React.FC = () => {
     messages: [],
     dashboard: [],
     apiKey: process.env.API_KEY || null,
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.5-flash',
   });
 
   const [isChatOpen, setIsChatOpen] = useState(false);
