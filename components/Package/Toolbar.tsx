@@ -59,7 +59,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onImportCSV, onImportURL, onEx
             boxShadow: Tokens.Effect.Shadow.Glow,
             color: Tokens.Color.Accent.Content[1],
           }}>
-            <BrandMark size={26} />
+            <BrandMark size={30} />
           </div>
           <div>
             <h1 style={{ ...Tokens.Type.Expressive.Display.M, color: Tokens.Color.Base.Content[1], lineHeight: 1 }}>LimeSheet</h1>

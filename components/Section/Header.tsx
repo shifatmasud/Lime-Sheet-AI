@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ onImportCSV, onImportURL, onExpo
             ...S.flexCenter,
             color: Tokens.Color.Accent.Content[1]
         }}>
-          <BrandMark size={26} />
+          <BrandMark size={30} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
           <h1 style={{ ...Tokens.Type.Expressive.Display.S, fontSize: '1.25rem', color: Tokens.Color.Base.Content[1], lineHeight: 1 }}>LimeSheet</h1>
