@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 692" role="img" aria-label="LimeSheet">
+  <title>LimeSheet</title>
+  <desc>LimeSheet mark: a single white script L that writes itself on lime.</desc>
+  <style>
+    .mark{stroke:#FFFFFF;fill:none;stroke-width:26.0;
+          stroke-linecap:round;stroke-linejoin:round}
+    .draw{stroke-dasharray:1489.56 2979.12;
+          animation:write 3.6s cubic-bezier(.65,0,.35,1) infinite}
+    @keyframes write{
+      0%       {stroke-dashoffset:1489.56}
+      37.50%  {stroke-dashoffset:0}
+      56.94%  {stroke-dashoffset:0}
+      84.72%  {stroke-dashoffset:1489.56}
+      100%     {stroke-dashoffset:1489.56}
+    }
+    @media (prefers-reduced-motion:reduce){
+      .draw{animation:none;stroke-dashoffset:0}
+    }
+  </style>
+  <rect width="720" height="692" rx="33" fill="#C8F560"/>
+  <path class="mark draw" d="M137.87 609.17C303.35 480.93 468.84 352.69 570.13 166.61C575.88 156.04 581.43 145.27 582.07 133.54C583.02 116.11 573.12 96.54 562.89 84.94C501.20 15.03 427.32 235.11 389.45 347.93C377.44 383.69 369.06 408.67 361.22 443.70C347.76 503.86 335.90 593.67 366.91 615.09C392.67 632.90 448.02 603.48 503.38 574.07"/>
+</svg>

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { DownloadSimple, UploadSimple, Link as LinkIcon, FileCsv, Sun, Moon } from 'phosphor-react';
+import { DownloadSimple, UploadSimple, Link as LinkIcon, Sun, Moon } from 'phosphor-react';
+import { BrandMark } from '../Core/BrandMark';
 import { Button } from '../Core/Button';
 import { Input } from '../Core/Input';
 import { Tokens, S, useIsMobile } from '../../utils/styles';
@@ -99,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ onImportCSV, onImportURL, onExpo
             ...S.flexCenter,
             color: Tokens.Color.Accent.Content[1]
         }}>
-          <FileCsv size={24} weight="duotone" />
+          <BrandMark size={26} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
           <h1 style={{ ...Tokens.Type.Expressive.Display.S, fontSize: '1.25rem', color: Tokens.Color.Base.Content[1], lineHeight: 1 }}>LimeSheet</h1>

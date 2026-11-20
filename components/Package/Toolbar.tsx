@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { DownloadSimple, UploadSimple, Link as LinkIcon, FileCsv } from 'phosphor-react';
+import { DownloadSimple, UploadSimple, Link as LinkIcon } from 'phosphor-react';
+import { BrandMark } from '../Core/BrandMark';
 import { Button } from '../Core/Button';
 import { Input } from '../Core/Input';
 import { Tokens, S } from '../../utils/styles';
@@ -56,8 +57,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onImportCSV, onImportURL, onEx
             backgroundColor: Tokens.Color.Accent.Surface[1],
             ...S.flexCenter,
             boxShadow: Tokens.Effect.Shadow.Glow,
+            color: Tokens.Color.Accent.Content[1],
           }}>
-            <FileCsv size={24} weight="duotone" color={Tokens.Color.Accent.Content[1]} />
+            <BrandMark size={26} />
           </div>
           <div>
             <h1 style={{ ...Tokens.Type.Expressive.Display.M, color: Tokens.Color.Base.Content[1], lineHeight: 1 }}>LimeSheet</h1>
