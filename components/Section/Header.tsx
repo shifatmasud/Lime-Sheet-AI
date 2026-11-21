@@ -98,7 +98,14 @@ export const Header: React.FC<HeaderProps> = ({ onImportCSV, onImportURL, onExpo
             backgroundColor: Tokens.Color.Accent.Surface[1],
             boxShadow: Tokens.Effect.Shadow.Glow,
             ...S.flexCenter,
-            color: Tokens.Color.Accent.Content[1]
+            color: Tokens.Color.Accent.Content[1],
+            // Optical centring against the wordmark. The 40px tile and the 40px
+            // text stack are centred on each other, but the ink inside the stack
+            // is not: the Bebas cap of "LimeSheet" starts 1px below the tile's top
+            // and the 12px label's baseline ends 4.25px above its bottom, so the
+            // tile reads ~1.6px low. -2px splits that air evenly (3px above,
+            // 2.25px below) and keeps the tile on the pixel grid.
+            transform: 'translateY(-2px)',
         }}>
           <BrandMark size={30} />
         </div>
