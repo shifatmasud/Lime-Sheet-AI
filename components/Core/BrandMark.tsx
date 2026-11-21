@@ -169,7 +169,8 @@ export interface BrandMarkProps {
   size?: number;
   /** `once` settles the slice in on mount (default); `none` renders it still. */
   animation?: 'once' | 'none';
-  /** Replay the settle when the mark is hovered or focused. */
+  /** Replay the settle when the mark is hovered or focused (off by default: a
+   *  pointer passing over a 40 px tile should only get the small lift). */
   replayOnHover?: boolean;
   /** Accessible name. Leave out where the wordmark beside it already names the product. */
   title?: string;
@@ -180,7 +181,7 @@ export interface BrandMarkProps {
 export const BrandMark: React.FC<BrandMarkProps> = ({
   size = 30,
   animation = 'once',
-  replayOnHover = true,
+  replayOnHover = false,
   title,
   className,
   style,
