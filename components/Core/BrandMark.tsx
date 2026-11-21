@@ -18,6 +18,22 @@ const PATH_LENGTH = 1489.56; // measured length of the 7 cubics
 const VIEW_BOX = '118 51 484 590'; // glyph + stroke, evenly padded
 const ASPECT = 484 / 590;
 
+/**
+ * Optical centring.
+ *
+ * The viewBox above is evenly padded, but the ink is not evenly distributed:
+ * the stroke's area centroid sits 8.2 % of the mark's width right of the
+ * glyph's bounding-box centre and 4.5 % of its height low (the top loop is
+ * dense and right, the entry tail thin and left). Centred by the box alone the
+ * mark therefore reads right and low inside the 40 × 40 tile.
+ *
+ * Half of that offset is the correction that balances the ink without the
+ * margins themselves looking lopsided — 4.12 % of the mark height to the left
+ * and 2.26 % up. It is a translate rather than a viewBox shift because the
+ * viewBox is already tight around the stroke: moving it would clip the glyph.
+ */
+const OPTICAL = { x: -0.04124, y: -0.02257 }; // fractions of the mark height
+
 const GLYPH =
   'M137.87 609.17C303.35 480.93 468.84 352.69 570.13 166.61' +
   'C575.88 156.04 581.43 145.27 582.07 133.54' +
@@ -101,7 +117,12 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
       aria-hidden={title ? undefined : true}
       focusable="false"
       onPointerEnter={replay}
-      style={{ height: size, width: size * ASPECT, ...style }}
+      style={{
+        height: size,
+        width: size * ASPECT,
+        transform: `translate(${(size * OPTICAL.x).toFixed(2)}px, ${(size * OPTICAL.y).toFixed(2)}px)`,
+        ...style,
+      }}
     >
       {title ? <title>{title}</title> : null}
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
