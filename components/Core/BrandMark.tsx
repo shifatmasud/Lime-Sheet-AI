@@ -1,97 +1,184 @@
 import React, { useState } from 'react';
 
 /**
- * LimeSheet script `ℓ` brand mark.
+ * LimeSheet brand mark: the approved half-lemon slice, as inline vector.
  *
- * The glyph is the approved mark: one continuous pen stroke rebuilt as 7
- * G2-continuous cubics (the path below is that exact geometry, unchanged).
- * It is inlined rather than loaded as an image so it takes `currentColor`,
- * stays crisp on any pixel grid, and can draw itself in CSS.
+ * The slice is drawn in three layers, exactly as in the approved artwork:
  *
- * Only the framing around the glyph is tuned for UI sizes: a tight viewBox
- * (the old 720 × 692 plate left ~30 % dead space) and a slightly heavier
- * stroke than the large cover artwork, because at 26 px a 26-unit stroke
- * lands under 1.2 px and turns grey.
+ *  1. the peel — one path with a hole in it (`fillRule="evenodd"`), so the
+ *     space between the peel and the cut face stays open and the tile's lime
+ *     shows through; that gap is what gives the slice its tilt and depth;
+ *  2. the cut face — the cream crescent the segments sit on;
+ *  3. seven segments — bright citrus wedges, each its own path.
+ *
+ * Geometry was traced from the approved render (`downloads/lemon-opt2-slice.png`)
+ * and rebuilt as periodic cubic splines — silhouette 0.99 IoU, cream 0.95,
+ * segments 0.96 — so proportions, tilt and segment layout are the approved
+ * ones. It is inline rather than an <img> so the peel takes `currentColor`,
+ * stays crisp at any pixel ratio, and can animate in CSS.
+ *
+ * Two deliberate adjustments, both for UI size:
+ *  - the peel box is mapped to 96 of the 100 units and centred, leaving room
+ *    for the 4 % hover lift without clipping; at `size={30}` in the 40 px tile
+ *    the peel renders 28.8 px — the same 72 % of the tile as the artwork;
+ *  - the peel's inner edge is drawn 2 % tighter than traced, which thickens the
+ *    ring from 0.66 px to 0.93 px at that size. Unadjusted the ring all but
+ *    disappears on a 1x screen, where the artwork's 2.3 % stroke lands under
+ *    one pixel.
  */
 
-const PATH_LENGTH = 1489.56; // measured length of the 7 cubics
-const VIEW_BOX = '118 51 484 590'; // glyph + stroke, evenly padded
-const ASPECT = 484 / 590;
+const PEEL =
+  'M54.89,97.89' +
+  'C51.56,98.00,48.17,97.83,44.91,97.38' +
+  'C41.65,96.92,38.41,96.19,35.33,95.17' +
+  'C32.25,94.15,29.24,92.84,26.45,91.23' +
+  'C23.64,89.63,20.96,87.71,18.55,85.53' +
+  'C16.14,83.36,13.88,80.83,11.96,78.15' +
+  'C10.03,75.48,8.32,72.52,6.99,69.51' +
+  'C5.65,66.49,4.59,63.27,3.96,60.08' +
+  'C3.32,56.88,3.08,53.58,3.16,50.34' +
+  'C3.25,47.10,3.79,43.82,4.47,40.62' +
+  'C5.15,37.42,6.12,34.22,7.23,31.11' +
+  'C8.35,28.01,9.62,24.93,11.15,22.01' +
+  'C12.67,19.08,14.39,16.11,16.41,13.58' +
+  'C18.43,11.04,20.69,8.54,23.28,6.76' +
+  'C25.87,4.98,28.90,3.68,31.95,2.92' +
+  'C35.01,2.17,38.43,2.00,41.63,2.22' +
+  'C44.83,2.44,48.07,3.20,51.16,4.24' +
+  'C54.24,5.28,57.23,6.78,60.09,8.46' +
+  'C62.97,10.12,65.74,12.16,68.37,14.26' +
+  'C71.00,16.36,73.52,18.69,75.89,21.06' +
+  'C78.25,23.43,80.49,25.88,82.54,28.45' +
+  'C84.59,31.01,86.51,33.67,88.20,36.46' +
+  'C89.88,39.25,91.40,42.15,92.66,45.20' +
+  'C93.92,48.23,95.06,51.47,95.75,54.69' +
+  'C96.43,57.92,96.92,61.32,96.77,64.54' +
+  'C96.63,67.76,95.99,71.05,94.87,74.04' +
+  'C93.75,77.02,92.03,79.94,90.07,82.46' +
+  'C88.10,84.97,85.66,87.21,83.07,89.11' +
+  'C80.48,91.01,77.53,92.58,74.51,93.85' +
+  'C71.48,95.12,68.20,96.07,64.93,96.74' +
+  'C61.66,97.42,58.23,97.79,54.89,97.89Z';
 
-/**
- * Optical centring.
- *
- * The viewBox above is evenly padded, but the ink is not evenly distributed:
- * the stroke's area centroid sits 8.2 % of the mark's width right of the
- * glyph's bounding-box centre and 4.5 % of its height low (the top loop is
- * dense and right, the entry tail thin and left). Centred by the box alone the
- * mark therefore reads right and low inside the 40 × 40 tile.
- *
- * Half of that offset is the correction that balances the ink without the
- * margins themselves looking lopsided — 4.12 % of the mark height to the left
- * and 2.26 % up. It is a translate rather than a viewBox shift because the
- * viewBox is already tight around the stroke: moving it would clip the glyph.
- */
-const OPTICAL = { x: -0.04124, y: -0.02257 }; // fractions of the mark height
+/** Inner edge of the peel: the hole in layer 1. */
+const PEEL_HOLE =
+  'M54.79,94.83' +
+  'C51.68,94.93,48.49,94.78,45.44,94.36' +
+  'C42.39,93.95,39.35,93.28,36.46,92.34' +
+  'C33.58,91.40,30.75,90.18,28.13,88.69' +
+  'C25.49,87.20,22.97,85.43,20.71,83.39' +
+  'C18.43,81.36,16.32,78.99,14.49,76.50' +
+  'C12.67,74.00,11.05,71.23,9.79,68.41' +
+  'C8.54,65.58,7.53,62.56,6.92,59.56' +
+  'C6.32,56.58,6.10,53.47,6.17,50.42' +
+  'C6.25,47.38,6.77,44.32,7.41,41.31' +
+  'C8.05,38.31,8.97,35.33,10.01,32.43' +
+  'C11.05,29.53,12.22,26.68,13.63,23.93' +
+  'C15.04,21.19,16.60,18.38,18.45,15.96' +
+  'C20.30,13.55,22.35,11.13,24.74,9.44' +
+  'C27.14,7.73,29.94,6.51,32.78,5.80' +
+  'C35.63,5.11,38.85,4.99,41.84,5.22' +
+  'C44.83,5.45,47.87,6.19,50.76,7.18' +
+  'C53.65,8.17,56.44,9.59,59.12,11.16' +
+  'C61.82,12.73,64.41,14.64,66.86,16.60' +
+  'C69.32,18.57,71.67,20.77,73.89,22.98' +
+  'C76.10,25.19,78.19,27.48,80.12,29.88' +
+  'C82.04,32.27,83.83,34.76,85.44,37.36' +
+  'C87.03,39.96,88.48,42.67,89.70,45.51' +
+  'C90.92,48.34,92.05,51.36,92.75,54.37' +
+  'C93.44,57.39,93.97,60.55,93.88,63.57' +
+  'C93.79,66.59,93.23,69.68,92.20,72.47' +
+  'C91.18,75.27,89.57,78.02,87.74,80.38' +
+  'C85.91,82.73,83.62,84.84,81.20,86.61' +
+  'C78.77,88.39,76.02,89.85,73.18,91.03' +
+  'C70.34,92.23,67.27,93.11,64.21,93.75' +
+  'C61.13,94.37,57.92,94.72,54.79,94.83Z';
 
-const GLYPH =
-  'M137.87 609.17C303.35 480.93 468.84 352.69 570.13 166.61' +
-  'C575.88 156.04 581.43 145.27 582.07 133.54' +
-  'C583.02 116.11 573.12 96.54 562.89 84.94' +
-  'C501.20 15.03 427.32 235.11 389.45 347.93' +
-  'C377.44 383.69 369.06 408.67 361.22 443.70' +
-  'C347.76 503.86 335.90 593.67 366.91 615.09' +
-  'C392.67 632.90 448.02 603.48 503.38 574.07';
+/** Cream cut face (rind and membranes read as one cream in the artwork). */
+const FACE =
+  'M74.52,86.77' +
+  'C72.12,86.95,69.70,86.82,67.36,86.51' +
+  'C65.01,86.20,62.71,85.63,60.46,84.89' +
+  'C58.21,84.15,56.01,83.18,53.88,82.07' +
+  'C51.74,80.96,49.65,79.64,47.63,78.22' +
+  'C45.62,76.80,43.66,75.22,41.78,73.54' +
+  'C39.90,71.87,38.08,70.06,36.34,68.20' +
+  'C34.61,66.32,32.94,64.35,31.37,62.35' +
+  'C29.79,60.35,28.29,58.27,26.89,56.19' +
+  'C25.48,54.10,24.14,51.99,22.95,49.85' +
+  'C21.77,47.72,20.66,45.57,19.76,43.36' +
+  'C18.85,41.17,18.06,38.94,17.51,36.67' +
+  'C16.96,34.39,16.57,32.07,16.46,29.69' +
+  'C16.35,27.31,16.42,24.81,16.83,22.40' +
+  'C17.24,19.98,17.87,17.40,18.90,15.23' +
+  'C19.93,13.06,21.31,10.97,23.01,9.39' +
+  'C24.72,7.79,26.93,6.58,29.14,5.71' +
+  'C31.35,4.84,33.88,4.36,36.27,4.16' +
+  'C38.68,3.95,41.13,4.11,43.51,4.47' +
+  'C45.89,4.84,48.26,5.52,50.58,6.36' +
+  'C52.88,7.19,55.16,8.29,57.36,9.48' +
+  'C59.55,10.67,61.70,12.06,63.76,13.49' +
+  'C65.81,14.92,67.78,16.48,69.66,18.08' +
+  'C71.54,19.68,73.33,21.37,75.05,23.12' +
+  'C76.76,24.86,78.37,26.69,79.91,28.58' +
+  'C81.45,30.47,82.90,32.44,84.27,34.47' +
+  'C85.64,36.50,86.96,38.61,88.13,40.77' +
+  'C89.29,42.93,90.39,45.18,91.29,47.45' +
+  'C92.18,49.73,92.97,52.07,93.51,54.45' +
+  'C94.06,56.84,94.45,59.27,94.56,61.72' +
+  'C94.67,64.18,94.60,66.75,94.19,69.21' +
+  'C93.78,71.65,93.14,74.24,92.10,76.38' +
+  'C91.06,78.53,89.66,80.57,87.94,82.08' +
+  'C86.21,83.58,83.95,84.65,81.72,85.43' +
+  'C79.49,86.22,76.92,86.59,74.52,86.77Z';
 
-/* Class names are prefixed `lms-` so nothing collides with app styles. */
+/** Seven segments, clockwise from the lower right. */
+const SEGMENTS: readonly string[] = [
+  'M75.75,80.61C74.36,80.42,72.90,79.35,71.92,78.20C70.94,77.06,70.53,75.18,69.85,73.71C69.18,72.24,68.52,70.82,67.87,69.36C67.22,67.89,66.62,66.39,65.96,64.91C65.30,63.44,64.60,61.99,63.91,60.53C63.22,59.07,62.43,57.65,61.81,56.16C61.20,54.66,60.12,52.55,60.23,51.57C60.34,50.59,61.39,50.00,62.48,50.28C63.55,50.55,65.33,52.27,66.70,53.23C68.06,54.19,69.33,55.09,70.68,56.04C72.03,56.97,73.46,57.89,74.82,58.84C76.17,59.78,77.42,60.81,78.78,61.72C80.14,62.64,81.68,63.36,83.00,64.35C84.32,65.33,85.99,66.35,86.69,67.63C87.38,68.91,87.58,70.57,87.16,71.99C86.74,73.42,85.30,74.96,84.17,76.18C83.03,77.41,81.72,78.61,80.32,79.34C78.92,80.09,77.15,80.80,75.75,80.61Z',
+  'M67.24,80.32C66.37,80.81,64.35,80.20,62.97,79.83C61.57,79.47,60.23,78.73,58.92,78.15C57.61,77.57,56.37,77.04,55.10,76.36C53.83,75.68,52.42,74.98,51.29,74.09C50.15,73.19,48.71,72.23,48.28,71.01C47.86,69.79,48.40,68.16,48.74,66.77C49.08,65.38,49.81,64.04,50.33,62.70C50.84,61.36,51.33,60.09,51.80,58.74C52.28,57.39,52.61,55.88,53.18,54.58C53.75,53.28,54.42,51.20,55.22,50.93C56.02,50.66,57.25,51.93,57.98,52.96C58.71,53.99,59.06,55.77,59.62,57.13C60.17,58.47,60.75,59.73,61.31,61.04C61.88,62.34,62.45,63.64,63.02,64.96C63.58,66.27,64.14,67.63,64.71,68.96C65.28,70.28,65.86,71.54,66.44,72.87C67.02,74.19,68.07,75.67,68.20,76.91C68.34,78.15,68.11,79.82,67.24,80.32Z',
+  'M44.82,67.67C43.82,67.94,42.28,66.68,41.13,65.82C39.98,64.96,38.94,63.63,37.93,62.51C36.92,61.38,36.00,60.23,35.08,59.06C34.17,57.88,33.28,56.67,32.43,55.47C31.59,54.27,30.77,53.11,30.02,51.87C29.28,50.63,28.36,49.27,27.96,48.00C27.56,46.74,27.01,45.02,27.63,44.27C28.26,43.52,30.26,43.54,31.71,43.53C33.16,43.52,34.84,44.02,36.34,44.21C37.84,44.41,39.26,44.57,40.72,44.69C42.19,44.82,43.65,44.86,45.16,44.98C46.67,45.10,48.52,44.93,49.78,45.44C51.05,45.94,52.42,46.88,52.73,48.00C53.04,49.12,52.10,50.79,51.66,52.15C51.22,53.51,50.61,54.84,50.09,56.18C49.55,57.51,49.02,58.80,48.53,60.15C48.04,61.49,47.78,62.98,47.16,64.24C46.54,65.49,45.83,67.41,44.82,67.67Z',
+  'M49.59,42.27C48.94,42.86,46.68,42.45,45.12,42.35C43.55,42.25,41.77,41.87,40.20,41.68C38.63,41.49,37.24,41.39,35.68,41.21C34.13,41.03,32.44,40.84,30.87,40.61C29.29,40.38,27.45,40.54,26.23,39.82C25.01,39.10,24.17,37.66,23.57,36.30C22.97,34.95,22.81,33.25,22.63,31.68C22.45,30.12,22.41,28.51,22.47,26.93C22.53,25.35,22.59,23.68,23.00,22.19C23.41,20.70,23.97,18.76,24.91,17.99C25.85,17.21,27.45,17.01,28.66,17.52C29.86,18.02,31.03,19.84,32.16,21.04C33.29,22.22,34.33,23.45,35.44,24.64C36.54,25.82,37.68,26.95,38.80,28.13C39.92,29.31,41.05,30.52,42.16,31.71C43.27,32.91,44.31,34.09,45.45,35.27C46.60,36.45,48.32,37.65,49.00,38.81C49.69,39.98,50.25,41.68,49.59,42.27Z',
+  'M53.13,38.44C52.34,38.70,50.70,37.03,49.57,36.04C48.45,35.04,47.47,33.65,46.41,32.48C45.34,31.30,44.26,30.16,43.17,28.99C42.08,27.83,40.95,26.64,39.88,25.47C38.82,24.30,37.85,23.14,36.78,21.98C35.71,20.82,34.49,19.68,33.46,18.48C32.42,17.27,30.78,15.91,30.58,14.73C30.38,13.55,31.25,12.16,32.27,11.39C33.28,10.63,35.15,10.34,36.68,10.14C38.22,9.94,39.93,10.08,41.48,10.20C43.04,10.33,44.55,10.56,46.02,10.90C47.49,11.24,49.06,11.54,50.32,12.26C51.56,12.99,52.90,13.94,53.50,15.22C54.10,16.51,53.83,18.36,53.90,19.96C53.98,21.57,53.91,23.24,53.94,24.83C53.97,26.42,54.03,27.89,54.09,29.49C54.15,31.10,54.47,32.97,54.31,34.46C54.15,35.95,53.92,38.17,53.13,38.44Z',
+  'M60.07,41.47C58.97,41.34,57.76,40.51,57.21,39.49C56.67,38.46,56.85,36.74,56.80,35.33C56.76,33.93,56.92,32.47,56.94,31.05C56.97,29.64,56.97,28.27,56.96,26.87C56.94,25.46,56.84,24.05,56.85,22.63C56.86,21.20,56.52,19.26,57.00,18.32C57.49,17.37,58.74,16.80,59.77,16.94C60.81,17.08,62.11,18.38,63.23,19.15C64.34,19.93,65.42,20.73,66.47,21.58C67.52,22.43,68.52,23.34,69.53,24.29C70.53,25.23,71.50,26.27,72.49,27.27C73.49,28.26,74.71,29.18,75.48,30.27C76.25,31.36,77.19,32.79,77.12,33.80C77.06,34.82,76.10,35.72,75.09,36.36C74.08,37.00,72.32,37.19,71.07,37.63C69.81,38.07,68.78,38.54,67.57,38.98C66.36,39.42,65.05,39.85,63.80,40.27C62.55,40.68,61.16,41.60,60.07,41.47Z',
+  'M87.52,63.31C86.61,63.66,84.84,62.36,83.55,61.65C82.26,60.94,81.03,59.91,79.77,59.06C78.52,58.22,77.27,57.43,76.01,56.59C74.74,55.73,73.42,54.82,72.16,53.97C70.90,53.12,69.69,52.29,68.44,51.45C67.18,50.61,65.85,49.85,64.63,48.95C63.40,48.06,61.33,47.04,61.08,46.08C60.83,45.11,62.04,43.84,63.15,43.15C64.25,42.46,66.26,42.36,67.72,41.94C69.19,41.52,70.52,41.09,71.93,40.62C73.33,40.15,74.72,39.40,76.16,39.12C77.60,38.84,79.37,38.41,80.58,38.93C81.79,39.46,82.63,41.02,83.42,42.26C84.22,43.51,84.75,45.04,85.35,46.42C85.95,47.80,86.55,49.15,87.02,50.55C87.49,51.95,87.84,53.33,88.18,54.83C88.52,56.33,89.17,58.10,89.06,59.51C88.95,60.92,88.44,62.95,87.52,63.31Z',
+];
+
+/* `lms-`-prefixed class names so nothing collides with app styles. */
 const CSS = `
-.lms-mark{display:block;overflow:visible}
-.lms-mark__path{
-  fill:none;
-  stroke:currentColor;
-  stroke-width:34;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-  stroke-dasharray:var(--lms-len) calc(var(--lms-len) * 2);
-  stroke-dashoffset:0;
+.lms-slice{display:block}
+.lms-slice__ink{
+  transform-box:view-box;
+  transform-origin:50px 50px;
+  transition:transform .28s cubic-bezier(.2,.8,.2,1);
 }
-.lms-mark--once .lms-mark__path{animation:lms-write 1.35s cubic-bezier(.65,0,.35,1) both}
-.lms-mark--loop .lms-mark__path{animation:lms-write-loop 3.6s cubic-bezier(.65,0,.35,1) infinite}
-@keyframes lms-write{
-  from{stroke-dashoffset:var(--lms-len)}
-  to{stroke-dashoffset:0}
+.lms-slice--once .lms-slice__ink{animation:lms-slice-in .55s cubic-bezier(.2,.85,.25,1) backwards}
+@keyframes lms-slice-in{
+  from{opacity:0;transform:scale(.9) rotate(-7deg)}
+  to{opacity:1;transform:scale(1) rotate(0)}
 }
-/* draw in 0–1.35 s · hold to 2.05 s · retract to 3.05 s · rest to 3.6 s */
-@keyframes lms-write-loop{
-  0%{stroke-dashoffset:var(--lms-len)}
-  37.5%{stroke-dashoffset:0}
-  56.94%{stroke-dashoffset:0}
-  84.72%{stroke-dashoffset:var(--lms-len)}
-  100%{stroke-dashoffset:var(--lms-len)}
+@media (hover:hover) and (pointer:fine){
+  .lms-slice:hover .lms-slice__ink{transform:scale(1.04)}
 }
 @media (prefers-reduced-motion:reduce){
-  .lms-mark .lms-mark__path{animation:none !important;stroke-dashoffset:0}
+  .lms-slice__ink{animation:none!important;transition:none!important;transform:none!important}
 }
 `;
 
 export interface BrandMarkProps {
-  /** Height of the mark in px. Width follows the glyph's aspect ratio. */
+  /** Edge of the square mark in px. */
   size?: number;
-  /**
-   * `once` draws in on mount and stays (default), `loop` runs the approved
-   * 3.6 s draw / hold / retract / rest cycle, `none` renders the finished stroke.
-   */
-  animation?: 'once' | 'loop' | 'none';
-  /** Replay the draw-in when the mark is hovered or focused. */
+  /** `once` settles the slice in on mount (default); `none` renders it still. */
+  animation?: 'once' | 'none';
+  /** Replay the settle when the mark is hovered or focused. */
   replayOnHover?: boolean;
-  /** Accessible name. Leave out where the wordmark already names the product. */
+  /** Accessible name. Leave out where the wordmark beside it already names the product. */
   title?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
 export const BrandMark: React.FC<BrandMarkProps> = ({
-  size = 26,
+  size = 30,
   animation = 'once',
   replayOnHover = true,
   title,
@@ -99,39 +186,35 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
   style,
 }) => {
   const [pass, setPass] = useState(0);
-  const animates = animation !== 'none';
-  const variant = animation === 'loop' ? 'loop' : animation === 'once' ? 'once' : '';
 
   const replay = () => {
-    if (animates && replayOnHover) setPass((p) => p + 1);
+    if (animation !== 'none' && replayOnHover) setPass((p) => p + 1);
   };
 
   return (
     <svg
-      className={['lms-mark', variant && `lms-mark--${variant}`, className].filter(Boolean).join(' ')}
-      viewBox={VIEW_BOX}
-      width={size * ASPECT}
+      className={['lms-slice', animation === 'once' && 'lms-slice--once', className]
+        .filter(Boolean)
+        .join(' ')}
+      viewBox="0 0 100 100"
+      width={size}
       height={size}
       role={title ? 'img' : undefined}
       aria-label={title}
       aria-hidden={title ? undefined : true}
       focusable="false"
       onPointerEnter={replay}
-      style={{
-        height: size,
-        width: size * ASPECT,
-        transform: `translate(${(size * OPTICAL.x).toFixed(2)}px, ${(size * OPTICAL.y).toFixed(2)}px)`,
-        ...style,
-      }}
+      style={{ width: size, height: size, ...style }}
     >
       {title ? <title>{title}</title> : null}
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <path
-        key={pass}
-        className="lms-mark__path"
-        d={GLYPH}
-        style={{ ['--lms-len' as string]: PATH_LENGTH } as React.CSSProperties}
-      />
+      <g key={pass} className="lms-slice__ink">
+        <path d={PEEL + PEEL_HOLE} fill="currentColor" fillRule="evenodd" />
+        <path d={FACE} fill="#fefce8" />
+        {SEGMENTS.map((d, i) => (
+          <path key={i} d={d} fill="#fde047" />
+        ))}
+      </g>
     </svg>
   );
 };
